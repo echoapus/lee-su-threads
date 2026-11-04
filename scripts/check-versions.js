@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Verify built Chrome and Firefox manifests against the release tag.
+// Verify extension manifests and userscript metadata against the release tag.
 // Run after a production build; development builds use tag + 1.
 
 import { execSync } from "node:child_process";
@@ -41,14 +41,19 @@ const tag = getTag();
 const rows = [["git tag (source of truth)", tag ?? "(none reachable)"]];
 const problems = [];
 
-// Built dist manifests (present only after a build).
-for (const rel of [
+// Built artifacts are checked only when present.
+const versions = [
   "dist/chrome/manifest.json",
   "dist/firefox/manifest.json",
   "dist/firefox-amo/manifest.json",
   "dist/firefox-direct/manifest.json",
-]) {
-  const v = getManifestVersion(rel);
+].map(rel => [rel, getManifestVersion(rel)]);
+const userscript = "dist/userscript/MetaThreadsCountryInfo.user.js";
+if (existsSync(join(root, userscript))) {
+  const metadata = readFileSync(join(root, userscript), "utf8");
+  versions.push([userscript, metadata.match(/^\/\/ @version\s+(\S+)/m)?.[1] ?? "(missing)"]);
+}
+for (const [rel, v] of versions) {
   if (v == null) continue;
   rows.push([rel, v]);
   // Flag bad built versions even when no tag is reachable — that is exactly the

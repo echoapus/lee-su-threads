@@ -3,8 +3,7 @@ import { formatLocation } from './locationMapper.js';
 import { appendStatusTags } from './profileBadge.js';
 import { getUserIdByUsername, fetchProfileByUserId } from './profileFetcher.js';
 
-// Cross-browser compatibility
-const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+import { browserAPI } from './browserAPI.js';
 
 /**
  * Display profile info badge for a user by finding and updating their fetch buttons

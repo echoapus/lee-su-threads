@@ -8,8 +8,7 @@ import { formatLocation } from './locationMapper.js';
 import { fetchProfileByUserId, updateButtonWithFetchResult } from './profileFetcher.js';
 import { appendStatusTags } from './profileBadge.js';
 
-// Cross-browser compatibility
-const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+import { browserAPI } from './browserAPI.js';
 
 /**
  * Inject appropriate location UI for a user (badge, empty indicator, or fetch button)

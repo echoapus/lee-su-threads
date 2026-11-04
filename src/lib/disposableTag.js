@@ -5,8 +5,7 @@
  * allowed to touch the DOM and browserAPI (i18n), the detector is not.
  */
 
-// Cross-browser compatibility
-const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+import { browserAPI } from './browserAPI.js';
 
 /**
  * Build the disposable-handle tag element (bracketed localized label + tooltip).

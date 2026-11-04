@@ -1,8 +1,10 @@
 import * as esbuild from 'esbuild';
-import { copyFile, mkdir, cp, readFile, writeFile } from 'fs/promises';
+import { copyFile, mkdir, cp, readFile, writeFile, rm } from 'fs/promises';
+import { resolve } from 'node:path';
 import { getGitVersion, incrementVersion, isValidExtensionVersion, PLACEHOLDER_VERSION } from './scripts/lib/version.js';
 
 const isWatch = process.argv.includes('--watch');
+const isUserscript = process.argv.includes('--userscript');
 const isDev = isWatch || process.env.NODE_ENV === 'development';
 
 // Build configuration for Firefox variants
@@ -72,6 +74,50 @@ const buildOptions = {
   minify: !isWatch,
 };
 
+async function userscriptBuildOptions() {
+  const manifest = JSON.parse(await readFile('src/manifest.json', 'utf8'));
+  const version = resolveManifestVersion(manifest.version, 'userscript');
+  const notices = `${await readFile('LICENSE', 'utf8')}\n${await readFile('NOTICE.md', 'utf8')}`;
+  const metadata = [
+    '// ==UserScript==',
+    '// @name MetaThreadsCountryInfo',
+    '// @namespace https://github.com/echoapus/lee-su-threads',
+    `// @version ${version}`,
+    '// @description Show Threads author locations, join dates and account badges.',
+    '// @match https://www.threads.com/*',
+    '// @run-at document-start',
+    '// @inject-into page',
+    '// @noframes',
+    '// @grant unsafeWindow',
+    '// @grant GM_getValue',
+    '// @grant GM_setValue',
+    '// @grant GM_listValues',
+    '// @grant GM_deleteValue',
+    '// @grant GM_addStyle',
+    '// @license MIT',
+    '// ==/UserScript=='
+  ].join('\n');
+  return {
+    entryPoints: ['src/userscript.js'],
+    outfile: 'dist/userscript/MetaThreadsCountryInfo.user.js',
+    bundle: true,
+    format: 'iife',
+    target: buildOptions.target,
+    minify: !isWatch,
+    loader: { '.css': 'text', '.woff2': 'dataurl' },
+    define: { window: 'unsafeWindow', XMLHttpRequest: 'unsafeWindow.XMLHttpRequest' },
+    banner: { js: `${metadata}\n${notices.split('\n').map(line => `// ${line}`).join('\n')}` },
+    plugins: [{
+      name: 'userscript-browser-api',
+      setup(build) {
+        build.onResolve({ filter: /browserAPI\.js$/ }, () => ({
+          path: resolve('src/userscript/browserAPI.js')
+        }));
+      }
+    }]
+  };
+}
+
 // Copy static files to a specific browser directory
 async function copyStaticFilesForBrowser(browser) {
   // Determine Firefox-specific build configuration
@@ -118,11 +164,14 @@ async function copyStaticFilesForBrowser(browser) {
   manifest.version = resolveManifestVersion(manifest.version, browser);
 
   await writeFile(`${distDir}/manifest.json`, JSON.stringify(manifest, null, 2));
+  await copyFile('LICENSE', `${distDir}/LICENSE`);
+  await copyFile('NOTICE.md', `${distDir}/NOTICE.md`);
 
   // Copy HTML and CSS
   await copyFile('src/styles.css', `${distDir}/styles.css`);
 
   // Copy _locales directory recursively
+  await rm(`${distDir}/_locales`, { recursive: true, force: true });
   await cp('_locales', `${distDir}/_locales`, { recursive: true });
 
   // Copy icons directory
@@ -142,15 +191,16 @@ async function copyStaticFiles() {
 
 async function build() {
   try {
-    // First, build the JavaScript bundles to dist/shared
+    const options = isUserscript ? await userscriptBuildOptions() : buildOptions;
+    // First, build the JavaScript bundles.
     if (isWatch) {
       const ctx = await esbuild.context({
-        ...buildOptions,
-        plugins: [{
+        ...options,
+        plugins: [...(options.plugins || []), {
           name: 'sync-browser-outputs',
           setup(build) {
             build.onEnd(async result => {
-              if (result.errors.length === 0) await copyStaticFiles();
+              if (!isUserscript && result.errors.length === 0) await copyStaticFiles();
             });
           }
         }]
@@ -158,10 +208,10 @@ async function build() {
       await ctx.watch();
       console.log('👀 Watching for changes...');
     } else {
-      await esbuild.build(buildOptions);
+      await esbuild.build(options);
       console.log('✓ JavaScript bundles built');
       // Then copy static files and organize into browser-specific directories
-      await copyStaticFiles();
+      if (!isUserscript) await copyStaticFiles();
       console.log('✓ Build complete');
     }
   } catch (error) {

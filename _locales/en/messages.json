@@ -1,96 +1,18 @@
 {
   "extName": {
-    "message": "Lee-Su-Threads"
+    "message": "MetaThreadsCountryInfo"
   },
   "extDescription": {
     "message": "Automatically displays location info for Threads post authors"
   },
-  "noLocation": {
-    "message": "No location"
-  },
   "noLocationData": {
     "message": "No location data"
-  },
-  "popupTitle": {
-    "message": "Lee-Su-Threads (Who Are You) - Settings"
-  },
-  "popupTitleShort": {
-    "message": "Settings"
-  },
-  "popupSubtitle": {
-    "message": "View location info from your feed"
-  },
-  "profiles": {
-    "message": "Profiles"
-  },
-  "thisSession": {
-    "message": "This Session"
-  },
-  "exportJson": {
-    "message": "Export as JSON"
-  },
-  "copyClipboard": {
-    "message": "Copy to Clipboard"
-  },
-  "clearCache": {
-    "message": "Clear Cache"
-  },
-  "emptyState": {
-    "message": "No profiles extracted yet.\nBrowse Threads to capture profile info."
-  },
-  "exportSuccess": {
-    "message": "Exported successfully!"
-  },
-  "exportFailed": {
-    "message": "Export failed"
-  },
-  "copySuccess": {
-    "message": "Copied to clipboard!"
-  },
-  "copyFailed": {
-    "message": "Failed to copy"
-  },
-  "cacheCleared": {
-    "message": "Cache cleared!"
-  },
-  "confirmClear": {
-    "message": "Are you sure you want to clear all cached profiles?"
   },
   "rateLimitWarning": {
     "message": "⚠️ Too many location queries. Rate limited by Threads. Auto-fetch paused for 1 hour. Other features unaffected"
   },
   "joined": {
     "message": "Joined"
-  },
-  "autoQuery": {
-    "message": "Auto-query"
-  },
-  "autoQueryFeed": {
-    "message": "Auto-query Feed"
-  },
-  "autoQueryFollower": {
-    "message": "Auto-query Follower"
-  },
-  "filterPlaceholder": {
-    "message": "Filter by location..."
-  },
-  "exportTitle": {
-    "message": "Export JSON"
-  },
-  "copyTitle": {
-    "message": "Copy"
-  },
-  "clearTitle": {
-    "message": "Clear cache"
-  },
-  "tabProfiles": {
-    "message": "Profiles"
-  },
-  "tabLocations": {
-    "message": "Location Stats"
-  },
-  "noLocationStats": {
-    "message": "No location data yet.\nBrowse Threads to capture profile locations."
   },
   "newUser": {
     "message": "NEW"
@@ -106,33 +28,6 @@
   },
   "dismiss": {
     "message": "Dismiss"
-  },
-  "resetEmoji": {
-    "message": "Reset to default flag"
-  },
-  "customEmojiHint": {
-    "message": "Click to set a custom emoji for this location"
-  },
-  "pickEmojiFor": {
-    "message": "Pick emoji for"
-  },
-  "noDataToExport": {
-    "message": "No profiles to export"
-  },
-  "noDataToCopy": {
-    "message": "No profiles to copy"
-  },
-  "cancel": {
-    "message": "Cancel"
-  },
-  "confirm": {
-    "message": "Clear"
-  },
-  "clearFailed": {
-    "message": "Failed to clear cache"
-  },
-  "clearing": {
-    "message": "Clearing..."
   },
   "disposableAccount": {
     "message": "Random handle"

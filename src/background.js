@@ -1,11 +1,8 @@
 // Background service worker for Threads Profile Info Extractor
 
-// Cross-browser compatibility: use browser.* API if available (Firefox), fallback to chrome.*
-const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+import { browserAPI } from './lib/browserAPI.js';
 
-const USER_ID_CACHE_MAX_AGE = 60 * 24 * 60 * 60 * 1000; // 60 days for user ID mapping
-const PROFILE_WITH_LOCATION_MAX_AGE = 21 * 24 * 60 * 60 * 1000; // 21 days for profiles with location
-const PROFILE_NO_LOCATION_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours (1 day) for profiles without location
+import { USER_ID_CACHE_MAX_AGE, PROFILE_WITH_LOCATION_MAX_AGE, PROFILE_NO_LOCATION_MAX_AGE } from './lib/cachePolicy.js';
 
 // Handle async message responses for both Chrome and Firefox
 async function handleAsyncMessage(message) {

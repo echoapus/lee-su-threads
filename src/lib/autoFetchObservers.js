@@ -2,7 +2,7 @@
  * IntersectionObserver for auto-fetching feed post profiles on scroll
  */
 
-const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+import { browserAPI } from './browserAPI.js';
 
 /**
  * Create IntersectionObserver for feed posts

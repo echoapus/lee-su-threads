@@ -13,12 +13,7 @@ import { polyfillCountryFlagEmojis } from 'country-flag-emoji-polyfill';
 
 console.log('[Threads Extractor] 🚀 content.js is loading...');
 
-// Cross-browser compatibility: use browser.* API if available (Firefox), fallback to chrome.*
-const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
-
-// Initialize country flag emoji polyfill for Windows compatibility (content script context)
-// Use local font to avoid CSP issues with CDN
-polyfillCountryFlagEmojis("Twemoji Country Flags", browserAPI.runtime.getURL('fonts/TwemojiCountryFlags.woff2'));
+import { browserAPI, injectScript } from './lib/browserAPI.js';
 
 // Store extracted profiles
 const profileCache = new Map();
@@ -40,16 +35,6 @@ const state = {
   autoFetchReady: false, // Wait for initial data to load
   rateLimitedUntil: 0, // Timestamp when rate limit cooldown ends
   isUserLoggedIn: null // null = unknown, true = logged in, false = logged out
-}
-
-// Inject the network interceptor script
-function injectScript() {
-  const script = document.createElement('script');
-  script.src = browserAPI.runtime.getURL('injected.js');
-  script.onload = function() {
-    this.remove();
-  };
-  (document.head || document.documentElement).appendChild(script);
 }
 
 // Listen for profile data from injected script
@@ -517,6 +502,8 @@ function observeFeed() {
 // Initialize
 function init() {
   console.log('[Threads Extractor] Content script loaded');
+
+  polyfillCountryFlagEmojis('Twemoji Country Flags', browserAPI.runtime.getURL('fonts/TwemojiCountryFlags.woff2'));
 
   // Inject network interceptor
   injectScript();

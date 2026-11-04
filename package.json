@@ -1,8 +1,7 @@
 {
-  "name": "lee-su-thread",
+  "name": "metathreadscountryinfo",
   "version": "1.0.0",
-  "description": "一個 Chrome 擴充功能，自動顯示 Threads 貼文作者的地點資訊，不需要點進每個人的個人檔案。",
-  "main": "background.js",
+  "description": "Threads 帳號地點、加入時間與標記工具，提供 Chrome／Firefox 擴充功能與 Violentmonkey userscript。",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
@@ -16,15 +15,15 @@
     "build:firefox-self-hosted": "FIREFOX_BUILD_TYPE=self-hosted node esbuild.config.js",
     "clean": "rm -rf dist",
     "start:firefox": "web-ext run --source-dir=dist/firefox --start-url=https://www.threads.com",
-    "check:versions": "node scripts/check-versions.js"
+    "check:versions": "node scripts/check-versions.js",
+    "prebuild:userscript": "npm run generate:mapper",
+    "build:userscript": "node esbuild.config.js --userscript"
   },
   "repository": {
     "type": "git",
-    "url": "git@gh-work:meettomorrow/lee-su-threads.git"
+    "url": "https://github.com/echoapus/lee-su-threads.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "devDependencies": {
     "esbuild": "^0.27.1",

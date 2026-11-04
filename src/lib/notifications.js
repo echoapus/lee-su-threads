@@ -2,7 +2,7 @@
  * Notification UI functions for showing toasts and banners
  */
 
-const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+import { browserAPI } from './browserAPI.js';
 
 /**
  * Show rate limit toast notification

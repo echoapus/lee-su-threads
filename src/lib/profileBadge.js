@@ -5,7 +5,7 @@ import { isNewUser } from './dateParser.js';
 import { isDisposableHandle } from './disposableHandle.js';
 import { createDisposableTag } from './disposableTag.js';
 
-const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+import { browserAPI } from './browserAPI.js';
 
 /**
  * Append the [NEW] and disposable-handle tags to a badge, if applicable

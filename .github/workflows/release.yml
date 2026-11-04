@@ -76,11 +76,11 @@ jobs:
 
       - name: Validate packaged files exist
         run: |
-          if [ ! -f "dist-zip/lee-su-threads-chrome-v${VERSION}.zip" ]; then
+          if [ ! -f "dist-zip/MetaThreadsCountryInfo-chrome-v${VERSION}.zip" ]; then
             echo "Error: Chrome package not found"
             exit 1
           fi
-          if [ ! -f "dist-zip/lee-su-threads-firefox-v${VERSION}-amo.zip" ]; then
+          if [ ! -f "dist-zip/MetaThreadsCountryInfo-firefox-v${VERSION}-amo.zip" ]; then
             echo "Error: Firefox AMO package not found"
             exit 1
           fi
@@ -106,8 +106,8 @@ jobs:
           # Find the signed XPI (web-ext creates a hash-based filename)
           XPI_FILE=$(find dist-zip -name "*.xpi" -type f | head -1)
           if [ -n "$XPI_FILE" ]; then
-            mv "$XPI_FILE" dist-zip/lee-su-threads-firefox-v${VERSION}-direct-install.xpi
-            echo "✅ Renamed: $(basename "$XPI_FILE") → lee-su-threads-firefox-v${VERSION}-direct-install.xpi"
+            mv "$XPI_FILE" dist-zip/MetaThreadsCountryInfo-firefox-v${VERSION}-direct-install.xpi
+            echo "✅ Renamed: $(basename "$XPI_FILE") → MetaThreadsCountryInfo-firefox-v${VERSION}-direct-install.xpi"
           else
             echo "❌ Error: No .xpi file found"
             ls -la dist-zip/
@@ -117,7 +117,7 @@ jobs:
       - name: Validate signed extension exists
         if: env.ENABLE_FIREFOX_SIGNING == 'true'
         run: |
-          if [ ! -f "dist-zip/lee-su-threads-firefox-v${VERSION}-direct-install.xpi" ]; then
+          if [ ! -f "dist-zip/MetaThreadsCountryInfo-firefox-v${VERSION}-direct-install.xpi" ]; then
             echo "Error: Signed extension not found"
             exit 1
           fi
@@ -132,9 +132,10 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist-zip/lee-su-threads-chrome-v*.zip
-            dist-zip/lee-su-threads-firefox-v*-amo.zip
-            dist-zip/lee-su-threads-firefox-v*-direct-install.xpi
+            dist-zip/MetaThreadsCountryInfo.user.js
+            dist-zip/MetaThreadsCountryInfo-chrome-v*.zip
+            dist-zip/MetaThreadsCountryInfo-firefox-v*-amo.zip
+            dist-zip/MetaThreadsCountryInfo-firefox-v*-direct-install.xpi
             dist-zip/updates.json
           draft: false
           prerelease: false
@@ -148,8 +149,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist-zip/lee-su-threads-chrome-v*.zip
-            dist-zip/lee-su-threads-firefox-v*-amo.zip
+            dist-zip/MetaThreadsCountryInfo.user.js
+            dist-zip/MetaThreadsCountryInfo-chrome-v*.zip
+            dist-zip/MetaThreadsCountryInfo-firefox-v*-amo.zip
           draft: false
           prerelease: false
           generate_release_notes: true
