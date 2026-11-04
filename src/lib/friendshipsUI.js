@@ -4,11 +4,9 @@
  */
 
 import { findUsernameContainer } from './domHelpers.js';
-import { isNewUser } from './dateParser.js';
 import { formatLocation } from './locationMapper.js';
 import { fetchProfileByUserId, updateButtonWithFetchResult } from './profileFetcher.js';
-import { isDisposableHandle } from './disposableHandle.js';
-import { createDisposableTag } from './disposableTag.js';
+import { appendStatusTags } from './profileBadge.js';
 
 // Cross-browser compatibility
 const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
@@ -18,9 +16,8 @@ const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
  * @param {string} username - Username (without @)
  * @param {string} userId - User ID
  * @param {Map} profileCache - Cache of profile data
- * @param {IntersectionObserver} observer - Optional IntersectionObserver for auto-fetch
  */
-export function injectLocationUIForUser(username, userId, profileCache, observer = null) {
+export function injectLocationUIForUser(username, userId, profileCache) {
   const profileInfo = profileCache.get(username);
 
   if (profileInfo) {
@@ -33,7 +30,7 @@ export function injectLocationUIForUser(username, userId, profileCache, observer
     }
   } else if (userId) {
     // No cached data - add a button to fetch on demand
-    injectLocationButtonIntoUserRow(username, userId, profileCache, observer);
+    injectLocationButtonIntoUserRow(username, userId, profileCache);
   }
 }
 
@@ -42,9 +39,8 @@ export function injectLocationUIForUser(username, userId, profileCache, observer
  * @param {string} username - Username (without @)
  * @param {string} userId - User ID
  * @param {Map} profileCache - Cache of profile data
- * @param {IntersectionObserver} observer - Optional IntersectionObserver for auto-fetch
  */
-function injectLocationButtonIntoUserRow(username, userId, profileCache, observer = null) {
+function injectLocationButtonIntoUserRow(username, userId, profileCache) {
   // Find all links to this user's profile
   const profileLinks = document.querySelectorAll(`a[href="/@${username}"]`);
 
@@ -72,11 +68,6 @@ function injectLocationButtonIntoUserRow(username, userId, profileCache, observe
           } else {
             // No follow button (e.g., own profile) - append to end
             insertTarget.appendChild(btn);
-          }
-
-          // Attach observer if provided
-          if (observer) {
-            observer.observe(btn);
           }
 
           break;
@@ -228,39 +219,20 @@ export async function createLocationBadge(profileInfo) {
   const badge = document.createElement('span');
   badge.className = 'threads-friendships-location-badge';
 
-  // Get showFlags setting, custom emojis, and disposable-account setting
-  const { showFlags = true, customLocationEmojis = {}, disposableAccountEnabled = true } = await browserAPI.storage.local.get(['showFlags', 'customLocationEmojis', 'disposableAccountEnabled']);
   const joinedLabel = browserAPI.i18n.getMessage('joined') || 'Joined';
 
   const locationText = document.createElement('span');
 
   if (profileInfo.location) {
-    // Get custom emoji for this location (if set)
-    const customEmoji = customLocationEmojis[profileInfo.location] || null;
-
-    const clickHint = browserAPI.i18n.getMessage('clickToCustomize') || 'Click to customize emoji';
-
-    // Display location with optional flag emoji or custom emoji
-    locationText.textContent = formatLocation(profileInfo.location, false, showFlags, customEmoji);
+    // Display location with flag emoji
+    locationText.textContent = formatLocation(profileInfo.location, false);
     badge.appendChild(locationText);
 
     if (profileInfo.joined) {
-      badge.title = `${profileInfo.location} • ${joinedLabel}: ${profileInfo.joined}\n(${clickHint})`;
+      badge.title = `${profileInfo.location} • ${joinedLabel}: ${profileInfo.joined}`;
     } else {
-      badge.title = `${profileInfo.location}\n(${clickHint})`;
+      badge.title = profileInfo.location;
     }
-    badge.style.cursor = 'pointer';
-
-    // Click to customize emoji - opens settings with this location
-    badge.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      const settingsUrl = browserAPI.runtime.getURL('popup.html') + `?location=${encodeURIComponent(profileInfo.location)}`;
-      browserAPI.runtime.sendMessage({
-        type: 'OPEN_POPUP_IN_TAB',
-        url: settingsUrl
-      });
-    });
   } else {
     // Location not available - show "無地點資料"
     const noLocationData = browserAPI.i18n.getMessage('noLocationData') || 'No location data';
@@ -269,24 +241,7 @@ export async function createLocationBadge(profileInfo) {
     badge.title = `${joinedLabel}: ${profileInfo.joined || 'Unknown'}`;
   }
 
-  // Add [NEW] label for new users (skip if verified)
-  const isNew = isNewUser(profileInfo.joined);
-  if (isNew && !profileInfo.isVerified) {
-    const newLabel = browserAPI.i18n.getMessage('newUser') || 'NEW';
-    const newTag = document.createElement('span');
-    newTag.className = 'threads-new-user-tag';
-    newTag.textContent = `[${newLabel}]`;
-    newTag.style.marginLeft = '4px';
-    badge.appendChild(newTag);
-  }
-
-  // Add disposable-handle (隨機帳號) tag if enabled and the username matches the
-  // Threads system-default format. Does not affect location / new-user logic.
-  if (disposableAccountEnabled && isDisposableHandle(profileInfo.username).isDisposable) {
-    const disposableTag = createDisposableTag();
-    disposableTag.style.marginLeft = '4px';
-    badge.appendChild(disposableTag);
-  }
+  appendStatusTags(badge, profileInfo, { marginLeft: true });
 
   return badge;
 }

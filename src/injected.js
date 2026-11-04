@@ -1,76 +1,11 @@
 // Injected script to intercept fetch/XHR responses for profile data
 import { parseProfileResponse } from './lib/profileParser.js';
+import { createThrottle } from './lib/requestThrottle.js';
 
 'use strict';
 
 // Note: Font polyfill is loaded by content.js (same document, different context)
 // No need to load it again here
-
-// ========== LOGGING HELPERS ==========
-function logRequest(type, url, options = {}) {
-  const logData = {
-    timestamp: new Date().toISOString(),
-    type: type,
-    url: url,
-    method: options.method || 'GET',
-    headers: {},
-    body: null,
-    bodyParsed: null
-  };
-
-  if (options.headers) {
-    if (options.headers instanceof Headers) {
-      options.headers.forEach((value, key) => {
-        logData.headers[key] = value;
-      });
-    } else if (typeof options.headers === 'object') {
-      logData.headers = { ...options.headers };
-    }
-  }
-
-  if (options.body) {
-    logData.body = options.body;
-    try {
-      if (typeof options.body === 'string') {
-        if (options.body.startsWith('{')) {
-          logData.bodyParsed = JSON.parse(options.body);
-        } else {
-          const params = new URLSearchParams(options.body);
-          logData.bodyParsed = Object.fromEntries(params.entries());
-        }
-      } else if (options.body instanceof FormData) {
-        logData.bodyParsed = {};
-        options.body.forEach((value, key) => {
-          logData.bodyParsed[key] = value;
-        });
-      } else if (options.body instanceof URLSearchParams) {
-        logData.bodyParsed = Object.fromEntries(options.body.entries());
-      }
-    } catch (e) {
-      logData.bodyParseError = e.message;
-    }
-  }
-
-  console.group(`%c[Threads Extractor] ${type} Request Captured`, 'color: #667eea; font-weight: bold;');
-  console.log('%cURL:', 'color: #10b981; font-weight: bold;', url);
-  console.log('%cMethod:', 'color: #10b981; font-weight: bold;', logData.method);
-  console.log('%cHeaders:', 'color: #10b981; font-weight: bold;', logData.headers);
-  console.log('%cRaw Body:', 'color: #10b981; font-weight: bold;', logData.body);
-  console.log('%cParsed Body:', 'color: #10b981; font-weight: bold;', logData.bodyParsed);
-  console.log('%cFull Log Object (copy this):', 'color: #f59e0b; font-weight: bold;');
-  console.log(JSON.stringify(logData, null, 2));
-  console.groupEnd();
-
-  window.dispatchEvent(new CustomEvent('threads-request-logged', { detail: logData }));
-  return logData;
-}
-
-function logResponse(type, url, responseText) {
-  console.group(`%c[Threads Extractor] ${type} Response Captured`, 'color: #764ba2; font-weight: bold;');
-  console.log('%cURL:', 'color: #10b981; font-weight: bold;', url);
-  console.log('%cResponse Preview:', 'color: #10b981; font-weight: bold;', responseText?.substring(0, 500));
-  console.groupEnd();
-}
 
 // ========== SESSION TOKENS ==========
 let sessionTokens = null;
@@ -220,6 +155,58 @@ function extractUserIds(obj, source = 'unknown') {
 // ========== PARSE PROFILE RESPONSE ==========
 // parseProfileResponse is imported from lib/profileParser.js
 
+// ========== SHARED RESPONSE PARSERS (fetch + XHR) ==========
+function handleBulkRouteDefinitions(data) {
+  if (!data.payload?.payloads) return;
+  const beforeCount = userIdMap.size;
+  for (const [routeKey, routeData] of Object.entries(data.payload.payloads)) {
+    // routeKey is like "/@username" (may be unicode escaped)
+    let decodedKey = routeKey;
+    try {
+      decodedKey = JSON.parse(`"${routeKey}"`);
+    } catch (e) {}
+
+    const usernameMatch = decodedKey.match(/^\/@([\w.]+)/);
+    if (usernameMatch) {
+      const username = usernameMatch[1];
+      const userId = routeData.result?.exports?.rootView?.props?.user_id
+                  || routeData.result?.exports?.hostableView?.props?.user_id;
+      if (userId) {
+        addUserId(username, String(userId), 'route');
+      }
+    }
+  }
+  const afterCount = userIdMap.size;
+  if (afterCount > beforeCount) {
+    console.log(`%c[Threads Extractor] 🎯 bulk-route-definitions: Found ${afterCount - beforeCount} NEW user(s)`, 'color: #22c55e; font-weight: bold;');
+  }
+}
+
+function handleFriendshipsEdges(data) {
+  const edges =
+    data.data?.xdt_text_app_user?.follower_users?.edges ||
+    data.data?.xdt_text_app_user?.following_users?.edges ||
+    data.data?.user?.followers?.edges ||
+    data.data?.user?.following?.edges ||
+    [];
+
+  if (edges.length > 0) {
+    console.log(`%c[Threads Extractor] Found ${edges.length} users in list`, 'color: #3b82f6;');
+    window.dispatchEvent(new CustomEvent('threads-friendships-list-loaded', {
+      detail: {
+        users: edges.map(edge => ({
+          pk: edge.node.pk,
+          username: edge.node.username,
+          full_name: edge.node.full_name
+        }))
+      }
+    }));
+  } else {
+    console.log('%c[Threads Extractor] ⚠️ Matched followers/following query but no edges found', 'color: #f59e0b;');
+    console.log('Response data structure:', data);
+  }
+}
+
 // ========== FETCH INTERCEPTOR ==========
 const originalFetch = window.fetch;
 window.fetch = async function(...args) {
@@ -255,10 +242,6 @@ window.fetch = async function(...args) {
     console.groupEnd();
   }
 
-  if (typeof url === 'string' && url.includes('about_this_profile_async_action')) {
-    logRequest('FETCH', url, options);
-  }
-
   const response = await originalFetch.apply(this, args);
 
   // Extract user IDs from responses
@@ -276,33 +259,7 @@ window.fetch = async function(...args) {
         // Special handling for bulk-route-definitions - this is the goldmine!
         if (url.includes('bulk-route-definitions')) {
           console.log('%c[Threads Extractor] 🎯 Intercepted bulk-route-definitions!', 'color: #f59e0b; font-weight: bold;');
-          if (data.payload?.payloads) {
-            const beforeCount = userIdMap.size;
-            for (const [routeKey, routeData] of Object.entries(data.payload.payloads)) {
-              // routeKey is like "/@username" (may be unicode escaped)
-              // Decode unicode escapes first
-              let decodedKey = routeKey;
-              try {
-                decodedKey = JSON.parse(`"${routeKey}"`);
-              } catch (e) {}
-
-              const usernameMatch = decodedKey.match(/^\/@([\w.]+)/);
-              if (usernameMatch) {
-                const username = usernameMatch[1];
-                const userId = routeData.result?.exports?.rootView?.props?.user_id
-                            || routeData.result?.exports?.hostableView?.props?.user_id;
-                if (userId) {
-                  addUserId(username, String(userId), 'route');
-                }
-              }
-            }
-            const afterCount = userIdMap.size;
-            if (afterCount > beforeCount) {
-              console.log(`%c[Threads Extractor] 🎯 bulk-route-definitions: Found ${afterCount - beforeCount} NEW user(s)`, 'color: #22c55e; font-weight: bold;');
-            }
-          } else {
-            console.log('[Threads Extractor] bulk-route-definitions: No payloads found in response');
-          }
+          handleBulkRouteDefinitions(data);
         }
 
         // Special handling for Followers/Following GraphQL queries
@@ -317,31 +274,7 @@ window.fetch = async function(...args) {
         if (url.includes('graphql/query') && isFriendshipsQuery) {
           console.log('%c[Threads Extractor] 📋 Intercepted Followers/Following dialog!', 'color: #3b82f6; font-weight: bold;');
           console.log('  Friendly name:', friendlyName);
-
-          // Try multiple possible data structures
-          const edges =
-            data.data?.xdt_text_app_user?.follower_users?.edges ||
-            data.data?.xdt_text_app_user?.following_users?.edges ||
-            data.data?.user?.followers?.edges ||
-            data.data?.user?.following?.edges ||
-            [];
-
-          if (edges.length > 0) {
-            console.log(`%c[Threads Extractor] Found ${edges.length} users in list`, 'color: #3b82f6;');
-            // Dispatch event to content script to handle location injection
-            window.dispatchEvent(new CustomEvent('threads-friendships-list-loaded', {
-              detail: {
-                users: edges.map(edge => ({
-                  pk: edge.node.pk,
-                  username: edge.node.username,
-                  full_name: edge.node.full_name
-                }))
-              }
-            }));
-          } else {
-            console.log('%c[Threads Extractor] ⚠️ Matched followers/following query but no edges found', 'color: #f59e0b;');
-            console.log('Response data structure:', data);
-          }
+          handleFriendshipsEdges(data);
         }
 
         const beforeCount = userIdMap.size;
@@ -358,7 +291,6 @@ window.fetch = async function(...args) {
     try {
       const clone = response.clone();
       const text = await clone.text();
-      logResponse('FETCH', url, text);
       const profileInfo = parseProfileResponse(text);
       if (profileInfo && profileInfo.username) {
         delete profileInfo._pairs;
@@ -409,29 +341,7 @@ XMLHttpRequest.prototype.send = function(...args) {
           jsonStr = jsonStr.substring(9);
         }
         const data = JSON.parse(jsonStr);
-        if (data.payload?.payloads) {
-          const beforeCount = userIdMap.size;
-          for (const [routeKey, routeData] of Object.entries(data.payload.payloads)) {
-            let decodedKey = routeKey;
-            try {
-              decodedKey = JSON.parse(`"${routeKey}"`);
-            } catch (e) {}
-
-            const usernameMatch = decodedKey.match(/^\/@([\w.]+)/);
-            if (usernameMatch) {
-              const username = usernameMatch[1];
-              const userId = routeData.result?.exports?.rootView?.props?.user_id
-                          || routeData.result?.exports?.hostableView?.props?.user_id;
-              if (userId) {
-                addUserId(username, String(userId), 'route-xhr');
-              }
-            }
-          }
-          const afterCount = userIdMap.size;
-          if (afterCount > beforeCount) {
-            console.log(`%c[Threads Extractor] 🎯 bulk-route-definitions (XHR): Found ${afterCount - beforeCount} NEW user(s)`, 'color: #22c55e; font-weight: bold;');
-          }
-        }
+        handleBulkRouteDefinitions(data);
       } catch (e) {
         console.error('[Threads Extractor] Error processing bulk-route-definitions:', e);
       }
@@ -465,31 +375,7 @@ XMLHttpRequest.prototype.send = function(...args) {
           jsonStr = jsonStr.substring(9);
         }
         const data = JSON.parse(jsonStr);
-
-        // Try multiple possible data structures
-        const edges =
-          data.data?.xdt_text_app_user?.follower_users?.edges ||
-          data.data?.xdt_text_app_user?.following_users?.edges ||
-          data.data?.user?.followers?.edges ||
-          data.data?.user?.following?.edges ||
-          [];
-
-        if (edges.length > 0) {
-          console.log(`%c[Threads Extractor] Found ${edges.length} users in list`, 'color: #3b82f6;');
-          // Dispatch event to content script to handle location injection
-          window.dispatchEvent(new CustomEvent('threads-friendships-list-loaded', {
-            detail: {
-              users: edges.map(edge => ({
-                pk: edge.node.pk,
-                username: edge.node.username,
-                full_name: edge.node.full_name
-              }))
-            }
-          }));
-        } else {
-          console.log('%c[Threads Extractor] ⚠️ Matched followers/following query but no edges found', 'color: #f59e0b;');
-          console.log('Response data structure:', data);
-        }
+        handleFriendshipsEdges(data);
       } catch (e) {
         console.error('[Threads Extractor] Error processing GraphQL followers/following response:', e);
       }
@@ -498,15 +384,8 @@ XMLHttpRequest.prototype.send = function(...args) {
 
   // Handle about_this_profile
   if (xhrUrl && xhrUrl.includes('about_this_profile_async_action')) {
-    logRequest('XHR', xhrUrl, {
-      method: this._threadsMethod,
-      headers: this._threadsHeaders,
-      body: args[0]
-    });
-
     this.addEventListener('load', function() {
       try {
-        logResponse('XHR', xhrUrl, this.responseText);
         const profileInfo = parseProfileResponse(this.responseText);
         if (profileInfo && profileInfo.username) {
           delete profileInfo._pairs;
@@ -535,7 +414,7 @@ async function fetchProfileInfo(targetUserId) {
   const params = new URLSearchParams();
   params.append('__user', '0');  // Always send 0 - auth comes from cookies, not __user param
   params.append('__a', sessionTokens.__a || '1');
-  params.append('__req', 'ext_' + Math.random().toString(36).substring(7));
+  params.append('__req', 'ext_' + crypto.randomUUID());
   params.append('__hs', sessionTokens.__hs || '');
   params.append('dpr', sessionTokens.dpr || '2');
   params.append('__ccg', sessionTokens.__ccg || 'UNKNOWN');
@@ -619,6 +498,13 @@ async function fetchProfileInfo(targetUserId) {
 
   return null;
 }
+
+// ========== RATE LIMITING ==========
+// Every profile fetch funnels through here regardless of where it came from
+// (auto-scroll queue, a manual 📍 click on a feed post, a manual click in the
+// followers/following list) - throttling this one choke point covers all of
+// them instead of rate-limiting each caller separately.
+const throttledFetchProfileInfo = createThrottle(fetchProfileInfo, 800);
 
 // ========== SCAN PAGE FOR SESSION TOKENS ==========
 function scanPageForSessionTokens() {
@@ -800,7 +686,7 @@ window.addEventListener('message', async (event) => {
   if (event.data?.type === 'threads-fetch-request') {
     const { requestId, userId } = event.data;
     console.log(`[Threads Extractor] Profile fetch request for user ID: ${userId}`);
-    const result = await fetchProfileInfo(userId);
+    const result = await throttledFetchProfileInfo(userId);
     window.postMessage({
       type: 'threads-fetch-response',
       requestId: requestId,
@@ -816,7 +702,7 @@ window.addEventListener('message', async (event) => {
 });
 
 // ========== EXPOSE FUNCTIONS ==========
-window.__threadsFetchProfileInfo = fetchProfileInfo;
+window.__threadsFetchProfileInfo = throttledFetchProfileInfo;
 window.__threadsGetUserIdMap = () => Object.fromEntries(userIdMap);
 window.__threadsGetSessionTokens = () => sessionTokens;
 window.__threadsIsLoggedIn = isLoggedIn;

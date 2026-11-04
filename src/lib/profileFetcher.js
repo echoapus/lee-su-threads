@@ -9,7 +9,7 @@
  * @returns {Promise<Object|null>} Profile info object or null if failed
  */
 export async function fetchProfileByUserId(userId, timeoutMs = 10000) {
-  const fetchRequestId = Math.random().toString(36).substring(7);
+  const fetchRequestId = crypto.randomUUID();
 
   return new Promise((resolve) => {
     const handler = (event) => {
@@ -41,7 +41,7 @@ export async function fetchProfileByUserId(userId, timeoutMs = 10000) {
  * @returns {Promise<string|null>} User ID or null if not found
  */
 export async function getUserIdByUsername(username, timeoutMs = 2000) {
-  const requestId = Math.random().toString(36).substring(7);
+  const requestId = crypto.randomUUID();
 
   return new Promise((resolve) => {
     const handler = (event) => {

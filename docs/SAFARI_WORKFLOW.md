@@ -67,16 +67,18 @@ npm run build:watch
 ### Testing on a real iPhone
 
 Connect the iPhone, select it as the Xcode run destination, and Run (Cmd+R) —
-same as the Simulator. **No version steps and no git tag are needed**; the popup
-just shows whatever the latest version tag is (or `tag + 1` in watch mode). Test
-freely, then do the version ceremony only when you're ready to ship.
+same as the Simulator. **No version steps and no git tag are needed**; the
+extension's entry in Safari's Extensions settings just shows whatever the
+latest version tag is (or `tag + 1` in watch mode). Test freely, then do the
+version ceremony only when you're ready to ship.
 
 ## Releasing to the App Store (iOS + macOS)
 
 > **You never hand-edit version numbers.** Both the extension version (shown in
-> the popup) and the app's `MARKETING_VERSION` (shown in App Store Connect) are
-> derived from the **git tag**. Editing `src/manifest*.json` or `MARKETING_VERSION`
-> by hand is what caused past drift (popup stuck at 0.3.7 while Apple saw 1.0.6).
+> the browser's extension list, e.g. `chrome://extensions`) and the app's
+> `MARKETING_VERSION` (shown in App Store Connect) are derived from the **git
+> tag**. Editing `src/manifest*.json` or `MARKETING_VERSION` by hand is what
+> caused past drift (extension stuck at 0.3.7 while Apple saw 1.0.6).
 
 **Order matters.** Pushing the tag immediately triggers the Chrome/Firefox
 release workflow and publishes a public GitHub Release — that half can't be
@@ -123,7 +125,7 @@ local tag (`git tag -d vX.Y.Z`) before it's pushed.
 
 | Number | Where users see it | Set by |
 |--------|--------------------|--------|
-| Extension manifest `version` | Extension popup (`v1.0.6`) | `npm run build` |
+| Extension manifest `version` | Browser's extension list (`v1.0.6`) | `npm run build` |
 | App `MARKETING_VERSION` | App Store Connect / Apple | `npm run set:safari-version` |
 
 **Re-uploading the same version?** App Store Connect rejects a duplicate build

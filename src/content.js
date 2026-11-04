@@ -3,10 +3,10 @@ import { findPostContainer, detectActiveTab, isUserListContext, findFollowButton
 import { injectLocationUIForUser, createLocationBadge } from './lib/friendshipsUI.js';
 import { displayProfileInfo, autoFetchProfile, createProfileBadge } from './lib/postUI.js';
 import { isSingleUserNotification, findIconElement, extractIconColor } from './lib/notificationDetector.js';
-import { fetchProfileByUserId, getUserIdByUsername, updateButtonWithFetchResult } from './lib/profileFetcher.js';
+import { fetchProfileByUserId, getUserIdByUsername } from './lib/profileFetcher.js';
 import { showRateLimitToast, showLoginRequiredBanner } from './lib/notifications.js';
-import { queueFetch, processFetchQueue, processFollowersFetchQueue } from './lib/queueManager.js';
-import { createFeedVisibilityObserver, createFollowersVisibilityObserver } from './lib/autoFetchObservers.js';
+import { queueFetch, processFetchQueue } from './lib/queueManager.js';
+import { createFeedVisibilityObserver } from './lib/autoFetchObservers.js';
 import { polyfillCountryFlagEmojis } from 'country-flag-emoji-polyfill';
 
 'use strict';
@@ -23,11 +23,9 @@ polyfillCountryFlagEmojis("Twemoji Country Flags", browserAPI.runtime.getURL('fo
 // Store extracted profiles
 const profileCache = new Map();
 
-// Auto-fetch queue and throttling
+// Auto-fetch queue and throttling (feed only - followers/following use manual fetch only)
 const fetchQueue = [];
-const followersFetchQueue = [];
 const pendingVisibility = new Map(); // Track posts waiting to be queued
-const pendingFollowersVisibility = new Map(); // Track followers waiting to be queued
 
 // Constants
 const FETCH_DELAY_MS = 800; // Delay between auto-fetches to avoid rate limiting
@@ -39,10 +37,7 @@ const VISIBILITY_DELAY_MS = 500; // How long a post must be visible before queui
 // Shared state object for queue manager and observers
 const state = {
   isFetching: false,
-  isFetchingFollowers: false,
   autoFetchReady: false, // Wait for initial data to load
-  autoQueryEnabled: true, // User preference for auto-query
-  autoQueryFollowersEnabled: false, // User preference for auto-query followers (default off)
   rateLimitedUntil: 0, // Timestamp when rate limit cooldown ends
   isUserLoggedIn: null // null = unknown, true = logged in, false = logged out
 }
@@ -85,18 +80,6 @@ window.addEventListener('threads-rate-limited', () => {
 window.addEventListener('threads-show-login-banner', () => {
   console.warn('[Threads Extractor] Login required - showing banner');
   showLoginRequiredBanner();
-});
-
-// Keyboard shortcut: Ctrl+Shift+, to open settings
-document.addEventListener('keydown', (event) => {
-  // Check for Ctrl+Shift+, on all platforms (standard settings shortcut)
-  if (event.ctrlKey && event.shiftKey && event.key === ',') {
-    event.preventDefault();
-    console.log('[Threads Extractor] Opening settings via keyboard shortcut...');
-
-    // Open popup in a new tab
-    browserAPI.runtime.sendMessage({ type: 'OPEN_POPUP_TAB' });
-  }
 });
 
 // Listen for login state changes from injected script
@@ -202,34 +185,23 @@ function waitForFriendshipsDOM(users) {
 function injectLocationBadgesIntoFriendshipsList(users) {
   for (const user of users) {
     const { pk, username } = user;
-    injectLocationUIForUser(username, pk, profileCache, followersVisibilityObserver);
+    injectLocationUIForUser(username, pk, profileCache);
   }
 }
 
-// Declare observers first (will be initialized after queue functions are defined)
+// Declare observer first (will be initialized after queue function is defined)
 let visibilityObserver;
-let followersVisibilityObserver;
 
-// Wrapper functions for queue management
+// Wrapper function for queue management
 function queueFeedFetch(username, btn) {
   queueFetch(username, btn, fetchQueue, visibilityObserver,
     () => processFetchQueue(fetchQueue, state, profileCache, FETCH_DELAY_MS),
     state.autoFetchReady, profileCache, MAX_QUEUE_SIZE);
 }
 
-function queueFollowersFetch(username, btn) {
-  queueFetch(username, btn, followersFetchQueue, followersVisibilityObserver,
-    () => processFollowersFetchQueue(followersFetchQueue, state, profileCache, FETCH_DELAY_MS),
-    true, profileCache, MAX_QUEUE_SIZE);
-}
-
-// Initialize IntersectionObservers using factory functions
+// Initialize IntersectionObserver using factory function
 visibilityObserver = createFeedVisibilityObserver(
   queueFeedFetch, pendingVisibility, profileCache, state, VISIBILITY_DELAY_MS
-);
-
-followersVisibilityObserver = createFollowersVisibilityObserver(
-  queueFollowersFetch, pendingFollowersVisibility, profileCache, state, VISIBILITY_DELAY_MS
 );
 
 // Detect if we're on an activity page (replies, follows, etc.)
@@ -504,12 +476,12 @@ function observeFeed() {
 
                     if (userData) {
                       // We have the user data with pk from GraphQL
-                      injectLocationUIForUser(username, userData.pk, profileCache, followersVisibilityObserver);
+                      injectLocationUIForUser(username, userData.pk, profileCache);
                     } else {
                       // User not in our GraphQL list - try to get user ID from injected script
                       getUserIdByUsername(username, 100).then(userId => {
                         if (userId) {
-                          injectLocationUIForUser(username, userId, profileCache, followersVisibilityObserver);
+                          injectLocationUIForUser(username, userId, profileCache);
                         }
                       });
                     }
@@ -538,79 +510,9 @@ function observeFeed() {
   }, { once: true });
 }
 
-// Detect Threads theme and store it for popup
-let themeObserver = null;
-
-function detectThreadsTheme() {
-  function updateTheme() {
-    // Check multiple possible attributes/classes that Threads might use
-    const html = document.documentElement;
-    const body = document.body;
-
-    // Try different detection methods
-    let theme = null;
-
-    // Method 1: data-color-mode attribute
-    const colorMode = html.getAttribute('data-color-mode');
-    if (colorMode) {
-      theme = colorMode === 'dark' ? 'dark' : 'light';
-    }
-
-    // Method 2: Check computed background color
-    if (!theme && body) {
-      const bgColor = window.getComputedStyle(body).backgroundColor;
-      // Parse RGB and check if it's dark (low values) or light (high values)
-      const rgb = bgColor.match(/\d+/g);
-      if (rgb && rgb.length >= 3) {
-        const brightness = (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) / 3;
-        theme = brightness < 128 ? 'dark' : 'light';
-      }
-    }
-
-    if (theme) {
-      browserAPI.storage.local.set({ threadsTheme: theme });
-    }
-
-    return theme;
-  }
-
-  // Initial detection
-  setTimeout(updateTheme, 1000); // Wait for page to fully load
-
-  // Watch for any attribute changes on html and body with debouncing
-  let updateTimeout = null;
-  themeObserver = new MutationObserver(() => {
-    clearTimeout(updateTimeout);
-    updateTimeout = setTimeout(updateTheme, 100); // Debounce for 100ms
-  });
-
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-color-mode', 'data-color-scheme', 'data-theme', 'class', 'style']
-  });
-
-  if (document.body) {
-    themeObserver.observe(document.body, {
-      attributes: true,
-      attributeFilter: ['class', 'style']
-    });
-  }
-}
-
-// Cleanup theme observer on page unload
-window.addEventListener('beforeunload', () => {
-  if (themeObserver) {
-    themeObserver.disconnect();
-    themeObserver = null;
-  }
-}, { once: true });
-
 // Initialize
 function init() {
   console.log('[Threads Extractor] Content script loaded');
-
-  // Detect and track Threads theme
-  detectThreadsTheme();
 
   // Inject network interceptor
   injectScript();
@@ -653,93 +555,6 @@ function init() {
     processFetchQueue(fetchQueue, state, profileCache, FETCH_DELAY_MS); // Process any queued items
   }, INITIAL_DELAY_MS);
 }
-
-// Load auto-query settings from storage
-browserAPI.storage.local.get(['autoQueryEnabled', 'autoQueryFollowersEnabled']).then((result) => {
-  state.autoQueryEnabled = result.autoQueryEnabled !== false;
-  state.autoQueryFollowersEnabled = result.autoQueryFollowersEnabled === true; // Default off
-});
-
-/**
- * Update all existing badges on the page to reflect showFlags setting change
- */
-async function updateBadgesForFlagsChange() {
-  // Update post badges
-  const postBadges = document.querySelectorAll('.threads-profile-info-badge');
-  for (const badge of postBadges) {
-    let username = null;
-
-    // Find the associated username from nearby profile links
-    const postContainer = badge.closest('[role="article"]') || badge.parentElement?.closest('div');
-    if (postContainer) {
-      const profileLink = postContainer.querySelector('a[href^="/@"]');
-      if (profileLink) {
-        const href = profileLink.getAttribute('href');
-        const match = href.match(/^\/@([\w.]+)/);
-        if (match) username = match[1];
-      }
-    }
-
-    // Replace with updated badge
-    if (username && profileCache.has(username)) {
-      const profileInfo = profileCache.get(username);
-      const newBadge = await createProfileBadge(profileInfo);
-      badge.parentElement?.replaceChild(newBadge, badge);
-    }
-  }
-
-  // Update friendships location badges
-  const friendshipBadges = document.querySelectorAll('.threads-friendships-location-badge');
-  for (const badge of friendshipBadges) {
-    let username = null;
-
-    // Find username from nearby profile link
-    const container = badge.parentElement?.parentElement;
-    if (container) {
-      const profileLink = container.querySelector('a[href^="/@"]');
-      if (profileLink) {
-        const href = profileLink.getAttribute('href');
-        const match = href.match(/^\/@([\w.]+)/);
-        if (match) username = match[1];
-      }
-    }
-
-    // Replace with updated badge
-    if (username && profileCache.has(username)) {
-      const profileInfo = profileCache.get(username);
-      const newBadge = await createLocationBadge(profileInfo);
-      badge.parentElement?.replaceChild(newBadge, badge);
-    }
-  }
-
-  console.log('[Threads Extractor] Updated all badges for flags change');
-}
-
-// Listen for setting changes from popup
-browserAPI.runtime.onMessage.addListener((message) => {
-  if (message.type === 'AUTO_QUERY_CHANGED') {
-    state.autoQueryEnabled = message.enabled;
-    console.log('[Threads Extractor] Auto-query', state.autoQueryEnabled ? 'enabled' : 'disabled');
-    if (state.autoQueryEnabled) {
-      processFetchQueue(fetchQueue, state, profileCache, FETCH_DELAY_MS);
-    }
-  } else if (message.type === 'AUTO_QUERY_FOLLOWERS_CHANGED') {
-    state.autoQueryFollowersEnabled = message.enabled;
-    console.log('[Threads Extractor] Auto-query followers', state.autoQueryFollowersEnabled ? 'enabled' : 'disabled');
-  } else if (message.type === 'SHOW_FLAGS_CHANGED') {
-    console.log('[Threads Extractor] Show flags', message.enabled ? 'enabled' : 'disabled');
-    // Update all existing badges on the page
-    updateBadgesForFlagsChange();
-  } else if (message.type === 'DISPOSABLE_ACCOUNT_CHANGED') {
-    console.log('[Threads Extractor] Disposable-account tag', message.enabled ? 'enabled' : 'disabled');
-    // Rebuild badges so the disposable-account tag appears/disappears
-    updateBadgesForFlagsChange();
-  } else if (message.type === 'CUSTOM_EMOJIS_CHANGED') {
-    console.log('[Threads Extractor] Custom emojis changed, refreshing badges');
-    // Update all existing badges to show new custom emojis
-    updateBadgesForFlagsChange();
-  }
-});
 
 // Wait for DOM to be ready
 if (document.readyState === 'loading') {

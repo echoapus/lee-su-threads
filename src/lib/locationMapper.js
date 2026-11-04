@@ -115,20 +115,12 @@ export function getLocationFlag(location) {
  * Format location string with optional flag emoji
  * @param {string} location - Location string from profile
  * @param {boolean} flagOnly - If true, return only flag; otherwise return "flag location"
- * @param {boolean} showFlags - If false, skip flag display (from user setting)
- * @param {string|null} customEmoji - Custom emoji override (from user customization)
  * @returns {string} - Formatted location string
  */
-export function formatLocation(location, flagOnly = false, showFlags = true, customEmoji = null) {
+export function formatLocation(location, flagOnly = false) {
   if (!location) return '';
 
-  // If flags are disabled, return location text only
-  if (!showFlags) {
-    return location;
-  }
-
-  // Use custom emoji if provided, otherwise get default flag
-  const emoji = customEmoji || getLocationFlag(location);
+  const emoji = getLocationFlag(location);
 
   if (emoji) {
     return flagOnly ? emoji : `${emoji} ${location}`;

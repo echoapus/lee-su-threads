@@ -16,34 +16,17 @@ export function showRateLimitToast(cooldownMs) {
   const toast = document.createElement('div');
   toast.id = 'threads-rate-limit-toast';
   const warningMsg = browserAPI.i18n.getMessage('rateLimitWarning') || '⚠️ Too many location queries. Rate limited by Threads.';
-  const popupHintMsg = browserAPI.i18n.getMessage('rateLimitPopupHint') || 'You can turn off auto-query in the popup.';
-  const openSettingsMsg = browserAPI.i18n.getMessage('rateLimitOpenSettings') || 'How to Use';
 
   const warningSpan = document.createElement('span');
   warningSpan.textContent = warningMsg;
-
-  const hintSpan = document.createElement('span');
-  hintSpan.className = 'threads-rate-limit-hint';
-  hintSpan.textContent = popupHintMsg;
-
-  const openSettingsBtn = document.createElement('button');
-  openSettingsBtn.id = 'threads-open-settings-btn';
-  openSettingsBtn.textContent = openSettingsMsg;
 
   const dismissBtn = document.createElement('button');
   dismissBtn.id = 'threads-dismiss-toast';
   dismissBtn.textContent = '✕';
 
   toast.appendChild(warningSpan);
-  toast.appendChild(hintSpan);
-  toast.appendChild(openSettingsBtn);
   toast.appendChild(dismissBtn);
   document.body.appendChild(toast);
-
-  // Open settings button - opens popup in a new tab
-  openSettingsBtn.addEventListener('click', () => {
-    browserAPI.runtime.sendMessage({ type: 'OPEN_POPUP_TAB' });
-  });
 
   // Dismiss button
   dismissBtn.addEventListener('click', () => {

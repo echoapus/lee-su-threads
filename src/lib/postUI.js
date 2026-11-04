@@ -1,8 +1,6 @@
 // Post UI functions for displaying profile info on Threads posts
-import { isNewUser } from './dateParser.js';
 import { formatLocation } from './locationMapper.js';
-import { isDisposableHandle } from './disposableHandle.js';
-import { createDisposableTag } from './disposableTag.js';
+import { appendStatusTags } from './profileBadge.js';
 
 // Cross-browser compatibility
 const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
@@ -47,33 +45,11 @@ export async function createProfileBadge(profileInfo) {
   badge.className = 'threads-profile-info-badge';
 
   const joinedLabel = browserAPI.i18n.getMessage('joined') || 'Joined';
-  const isNew = isNewUser(profileInfo.joined);
-  const newLabel = browserAPI.i18n.getMessage('newUser') || 'NEW';
-
-  // Get showFlags setting, custom emojis, and disposable-account setting
-  const { showFlags = true, customLocationEmojis = {}, disposableAccountEnabled = true } = await browserAPI.storage.local.get(['showFlags', 'customLocationEmojis', 'disposableAccountEnabled']);
 
   if (profileInfo.location) {
-    // Get custom emoji for this location (if set)
-    const customEmoji = customLocationEmojis[profileInfo.location] || null;
-
-    const clickHint = browserAPI.i18n.getMessage('clickToCustomize') || 'Click to customize emoji';
-
-    // Display location with optional flag emoji or custom emoji
-    badge.textContent = formatLocation(profileInfo.location, false, showFlags, customEmoji);
-    badge.title = `${profileInfo.location} • ${joinedLabel}: ${profileInfo.joined || 'Unknown'}\n(${clickHint})`;
-    badge.style.cursor = 'pointer';
-
-    // Click to customize emoji - opens settings with this location
-    badge.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      const settingsUrl = browserAPI.runtime.getURL('popup.html') + `?location=${encodeURIComponent(profileInfo.location)}`;
-      browserAPI.runtime.sendMessage({
-        type: 'OPEN_POPUP_IN_TAB',
-        url: settingsUrl
-      });
-    });
+    // Display location with flag emoji
+    badge.textContent = formatLocation(profileInfo.location, false);
+    badge.title = `${profileInfo.location} • ${joinedLabel}: ${profileInfo.joined || 'Unknown'}`;
   } else {
     // Location not available - show "無地點資料" with same hover behavior as regular location
     const noLocationData = browserAPI.i18n.getMessage('noLocationData') || 'No location data';
@@ -81,19 +57,7 @@ export async function createProfileBadge(profileInfo) {
     badge.title = `${joinedLabel}: ${profileInfo.joined || 'Unknown'}`;
   }
 
-  // Add [NEW] label for new users (skip if verified)
-  if (isNew && !profileInfo.isVerified) {
-    const newTag = document.createElement('span');
-    newTag.className = 'threads-new-user-tag';
-    newTag.textContent = `[${newLabel}]`;
-    badge.appendChild(newTag);
-  }
-
-  // Add disposable-handle (隨機帳號) tag if enabled and the username matches the
-  // Threads system-default format. Does not affect location / new-user logic.
-  if (disposableAccountEnabled && isDisposableHandle(profileInfo.username).isDisposable) {
-    badge.appendChild(createDisposableTag());
-  }
+  appendStatusTags(badge, profileInfo);
 
   return badge;
 }
@@ -114,7 +78,7 @@ export async function autoFetchProfile(username, btn, profileCache) {
   }
 
   // Request user ID lookup
-  const requestId = Math.random().toString(36).substring(7);
+  const requestId = crypto.randomUUID();
   const userId = await new Promise((resolve) => {
     const handler = (event) => {
       if (event.data?.type === 'threads-userid-response' && event.data?.requestId === requestId) {
@@ -142,7 +106,7 @@ export async function autoFetchProfile(username, btn, profileCache) {
   }
 
   // Request profile fetch
-  const fetchRequestId = Math.random().toString(36).substring(7);
+  const fetchRequestId = crypto.randomUUID();
   const result = await new Promise((resolve) => {
     const handler = (event) => {
       if (event.data?.type === 'threads-fetch-response' && event.data?.requestId === fetchRequestId) {

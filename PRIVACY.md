@@ -1,6 +1,6 @@
 # Privacy Policy / 隱私權政策
 
-**Last updated / 最後更新：2025-01-17**
+**Last updated / 最後更新：2026-11-04**
 
 ---
 
@@ -19,8 +19,8 @@ The extension only:
 ### Data Storage
 
 - All data is stored locally on your device using your browser's built-in storage API
-- Cached data automatically expires after 24 hours
-- You can clear all stored data at any time through the extension popup
+- Cached data expires automatically (within a day for profiles with no location, up to a few weeks otherwise)
+- Removing the extension deletes all of its locally stored data
 
 ### Permissions Used
 
@@ -52,8 +52,8 @@ If you have any questions about this privacy policy, please open an issue on our
 ### 資料儲存
 
 - 所有資料都使用瀏覽器內建的儲存 API 儲存在您的裝置上
-- 快取資料會在 24 小時後自動過期
-- 您可以隨時透過擴充功能彈出視窗清除所有儲存的資料
+- 快取資料會自動過期（沒有地點資訊的在一天內，其餘最多數週）
+- 移除擴充功能會刪除其所有本機儲存的資料
 
 ### 使用的權限
 

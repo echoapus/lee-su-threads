@@ -116,11 +116,22 @@ export function detectActiveTab(tabs) {
  * @returns {boolean} - True if in user-list context, false if in post context
  */
 export function isUserListContext(container) {
-  if (!container) return false;
+  return findFollowButtonContainer(container) !== null;
+}
 
-  // User-list rows have a distinctive pattern:
-  // The Follow button comes AFTER the username section as a sibling
-  // Key: Look for a div containing [role="button"] that comes AFTER a div with username link
+/**
+ * Find the Follow button container in a user-list row
+ * More robust than relying on obfuscated class names
+ *
+ * User-list rows have a distinctive pattern: the Follow button comes AFTER the
+ * username section as a sibling. Key: look for a div containing [role="button"]
+ * that comes after a div with a username link.
+ *
+ * @param {HTMLElement} container - The container element (from findPostContainer)
+ * @returns {HTMLElement|null} - The button container div, or null if not found
+ */
+export function findFollowButtonContainer(container) {
+  if (!container) return null;
 
   // Find all divs that are grandchildren of the container
   const secondLevelDivs = Array.from(container.querySelectorAll(':scope > div > div'));
@@ -157,67 +168,6 @@ export function isUserListContext(container) {
 
     if (hasUsernameBefore) {
       // Final check: the button text should contain Follow-related text
-      const buttonText = button.textContent?.trim() || '';
-      const hasFollowText = buttonText.includes('追蹤') ||
-                            buttonText.includes('Follow') ||
-                            buttonText.includes('フォロー') ||
-                            buttonText.includes('팔로우') ||
-                            buttonText.includes('关注') ||
-                            buttonText.includes('Following') ||
-                            buttonText.includes('正在追蹤');
-
-      if (hasFollowText) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-/**
- * Find the Follow button container in a user-list row
- * More robust than relying on obfuscated class names
- *
- * @param {HTMLElement} container - The container element (from findPostContainer)
- * @returns {HTMLElement|null} - The button container div, or null if not found
- */
-export function findFollowButtonContainer(container) {
-  if (!container) return null;
-
-  // Find all divs that are grandchildren of the container
-  const secondLevelDivs = Array.from(container.querySelectorAll(':scope > div > div'));
-
-  // Look for the Follow button container (uses same logic as isUserListContext)
-  for (let i = 0; i < secondLevelDivs.length; i++) {
-    const div = secondLevelDivs[i];
-    const button = div.querySelector('[role="button"]:not(a)');
-    if (!button) continue;
-
-    const parent = div.parentElement;
-    if (!parent || parent.children.length < 2) continue;
-
-    // Check if this div comes AFTER a sibling that contains username
-    const siblings = Array.from(parent.children);
-    const buttonIndex = siblings.indexOf(div);
-
-    // Look for a previous sibling that contains a username link
-    let hasUsernameBefore = false;
-    for (let j = 0; j < buttonIndex; j++) {
-      const sibling = siblings[j];
-      const usernameLink = sibling.querySelector('a[href^="/@"]');
-      if (usernameLink) {
-        // Verify this is a username link (not a post link)
-        const href = usernameLink.getAttribute('href');
-        if (href && /^\/@[^/]+$/.test(href)) {
-          hasUsernameBefore = true;
-          break;
-        }
-      }
-    }
-
-    if (hasUsernameBefore) {
-      // Check if button text contains Follow-related text
       const buttonText = button.textContent?.trim() || '';
       const hasFollowText = buttonText.includes('追蹤') ||
                             buttonText.includes('Follow') ||

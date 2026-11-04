@@ -61,10 +61,8 @@ function resolveManifestVersion(manifestVersion, label) {
 const buildOptions = {
   entryPoints: [
     'src/content.js',
-    'src/popup.js',
     'src/background.js',
     'src/injected.js',
-    'src/onboarding.js',
   ],
   bundle: true,
   outdir: 'dist/shared',
@@ -94,15 +92,12 @@ async function copyStaticFilesForBrowser(browser) {
 
   // Copy bundled JS files from shared directory
   await copyFile('dist/shared/content.js', `${distDir}/content.js`);
-  await copyFile('dist/shared/popup.js', `${distDir}/popup.js`);
   await copyFile('dist/shared/background.js', `${distDir}/background.js`);
   await copyFile('dist/shared/injected.js', `${distDir}/injected.js`);
-  await copyFile('dist/shared/onboarding.js', `${distDir}/onboarding.js`);
 
   if (!isWatch) {
     // Copy source maps in production builds
     await copyFile('dist/shared/content.js.map', `${distDir}/content.js.map`).catch(() => {});
-    await copyFile('dist/shared/popup.js.map', `${distDir}/popup.js.map`).catch(() => {});
     await copyFile('dist/shared/background.js.map', `${distDir}/background.js.map`).catch(() => {});
     await copyFile('dist/shared/injected.js.map', `${distDir}/injected.js.map`).catch(() => {});
   }
@@ -125,8 +120,6 @@ async function copyStaticFilesForBrowser(browser) {
   await writeFile(`${distDir}/manifest.json`, JSON.stringify(manifest, null, 2));
 
   // Copy HTML and CSS
-  await copyFile('src/popup.html', `${distDir}/popup.html`);
-  await copyFile('src/onboarding.html', `${distDir}/onboarding.html`);
   await copyFile('src/styles.css', `${distDir}/styles.css`);
 
   // Copy _locales directory recursively
@@ -148,15 +141,12 @@ async function copyStaticFilesForSafari() {
 
   // Copy bundled JS files from shared directory
   await copyFile('dist/shared/content.js', `${distDir}/content.js`);
-  await copyFile('dist/shared/popup.js', `${distDir}/popup.js`);
   await copyFile('dist/shared/background.js', `${distDir}/background.js`);
   await copyFile('dist/shared/injected.js', `${distDir}/injected.js`);
-  await copyFile('dist/shared/onboarding.js', `${distDir}/onboarding.js`);
 
   if (!isWatch) {
     // Copy source maps in production builds
     await copyFile('dist/shared/content.js.map', `${distDir}/content.js.map`).catch(() => {});
-    await copyFile('dist/shared/popup.js.map', `${distDir}/popup.js.map`).catch(() => {});
     await copyFile('dist/shared/background.js.map', `${distDir}/background.js.map`).catch(() => {});
     await copyFile('dist/shared/injected.js.map', `${distDir}/injected.js.map`).catch(() => {});
   }
@@ -170,8 +160,6 @@ async function copyStaticFilesForSafari() {
   await writeFile(`${distDir}/manifest.json`, JSON.stringify(manifest, null, 2));
 
   // Copy HTML and CSS
-  await copyFile('src/popup.html', `${distDir}/popup.html`);
-  await copyFile('src/onboarding.html', `${distDir}/onboarding.html`);
   await copyFile('src/styles.css', `${distDir}/styles.css`);
 
   // Copy _locales directory recursively

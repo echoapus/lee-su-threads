@@ -68,26 +68,11 @@
   "autoQueryFollower": {
     "message": "フォロワー自動取得"
   },
-  "feedLabel": {
-    "message": "フィード"
-  },
-  "followerLabel": {
-    "message": "フォロワー"
-  },
-  "autoQueryTooltip": {
-    "message": "Threads 閲覧中にプロフィール情報を自動的に取得します"
-  },
   "autoQueryFollowers": {
     "message": "フォロワー自動取得"
   },
   "autoQueryFollowersTooltip": {
     "message": "フォロワー/フォロー中リストの位置情報を自動取得します"
-  },
-  "showFlags": {
-    "message": "国旗を表示"
-  },
-  "showFlagsTooltip": {
-    "message": "地域名の横に国旗を表示します"
   },
   "filterPlaceholder": {
     "message": "地域で絞り込み..."
@@ -113,12 +98,6 @@
   "newUser": {
     "message": "新規"
   },
-  "rateLimitPopupHint": {
-    "message": "レート制限を回避するには、拡張機能の設定で自動クエリをオフにできます。"
-  },
-  "rateLimitOpenSettings": {
-    "message": "使い方"
-  },
   "loginRequiredWarning": {
     "message": "🔒 この拡張機能を使用するには Threads にログインしてください"
   },
@@ -131,77 +110,11 @@
   "dismiss": {
     "message": "閉じる"
   },
-  "onboardingTitle": {
-    "message": "Lee-Su-Threads へようこそ！"
-  },
-  "onboardingSubtitle": {
-    "message": "Threads ユーザーの地域情報を自動的に表示"
-  },
-  "onboardingFeaturesTitle": {
-    "message": "この拡張機能でできること"
-  },
-  "onboardingFeature1": {
-    "message": "Threads 投稿者の地域と参加日を表示"
-  },
-  "onboardingFeature2": {
-    "message": "スクロール中にプロフィール情報を自動取得"
-  },
-  "onboardingFeature3": {
-    "message": "新規ユーザー（2ヶ月以内に参加）を [新規] バッジで強調表示"
-  },
-  "onboardingFeature4": {
-    "message": "ポップアップパネルで地域統計を表示"
-  },
-  "onboardingControlTitle": {
-    "message": "拡張機能の制御"
-  },
-  "onboardingControlDesc": {
-    "message": "ブラウザのツールバーにある拡張機能アイコンをクリックすることで、いつでも自動クエリのオン/オフを切り替えることができます。"
-  },
-  "onboardingStep1Title": {
-    "message": "拡張機能アイコンをクリック"
-  },
-  "onboardingStep1Desc": {
-    "message": "ブラウザの拡張機能ツールバー（通常は右上隅）で Lee-Su-Threads アイコンを見つけます。"
-  },
-  "onboardingStep2Title": {
-    "message": "自動クエリを切り替え"
-  },
-  "onboardingStep2Desc": {
-    "message": "ポップアップ内のスイッチを使用して、自動プロフィール取得を有効または無効にします。"
-  },
-  "onboardingStep3Title": {
-    "message": "統計を表示"
-  },
-  "onboardingStep3Desc": {
-    "message": "「地域統計」タブをチェックして、フィードの作成者がどこから来ているかを確認しましょう！"
-  },
-  "onboardingStep4Title": {
-    "message": "クイックアクセスショートカット"
-  },
-  "onboardingStep4Desc": {
-    "message": "Threads で Ctrl+Shift+,（カンマ）を押すと、設定を新しいタブで素早く開くことができます。"
-  },
-  "onboardingLink": {
-    "message": "ヘルプ"
-  },
-  "onboardingCtaTitle": {
-    "message": "準備はできましたか？"
-  },
-  "onboardingCtaButton": {
-    "message": "Threads を開く"
-  },
-  "onboardingFooter": {
-    "message": "Threads コミュニティのために ❤️ で作成"
-  },
   "resetEmoji": {
     "message": "デフォルトの旗にリセット"
   },
   "customEmojiHint": {
     "message": "クリックしてこの場所のカスタム絵文字を設定"
-  },
-  "clickToCustomize": {
-    "message": "クリックして絵文字をカスタマイズ"
   },
   "pickEmojiFor": {
     "message": "次の場所の絵文字を選択："
@@ -229,8 +142,5 @@
   },
   "disposableAccountTooltip": {
     "message": "このアカウントは Threads がランダムに割り当てたデフォルトのユーザーネームのままで、一度も変更されていません。偽アカウントという意味ではありません。"
-  },
-  "disposableToggle": {
-    "message": "ランダムID"
   }
 }

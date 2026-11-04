@@ -3,9 +3,6 @@
 // Cross-browser compatibility: use browser.* API if available (Firefox), fallback to chrome.*
 const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
 
-// Import version utilities
-import { compareVersions, shouldShowOnboarding } from './lib/versionUtils.js';
-
 const USER_ID_CACHE_MAX_AGE = 60 * 24 * 60 * 60 * 1000; // 60 days for user ID mapping
 const PROFILE_WITH_LOCATION_MAX_AGE = 21 * 24 * 60 * 60 * 1000; // 21 days for profiles with location
 const PROFILE_NO_LOCATION_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours (1 day) for profiles without location
@@ -73,84 +70,11 @@ function handleAsyncMessage(message, sender, sendResponse) {
     return true; // Keep channel open for async response
   }
 
-  // Open onboarding page
-  if (message.type === 'OPEN_ONBOARDING') {
-    browserAPI.tabs.create({
-      url: browserAPI.runtime.getURL('onboarding.html')
-    });
-    return false;
-  }
-
-  // Open popup in a new tab
-  if (message.type === 'OPEN_POPUP_TAB') {
-    browserAPI.tabs.create({
-      url: browserAPI.runtime.getURL('popup.html')
-    });
-    return false;
-  }
-
-  // Open popup in a new tab with URL (for location pre-selection)
-  // Reuse existing popup tab if one exists
-  if (message.type === 'OPEN_POPUP_IN_TAB') {
-    const popupUrl = browserAPI.runtime.getURL('popup.html');
-
-    // Find existing popup tab
-    browserAPI.tabs.query({ url: popupUrl + '*' }).then((tabs) => {
-      if (tabs.length > 0) {
-        // Reuse existing tab - update URL and focus it
-        browserAPI.tabs.update(tabs[0].id, {
-          url: message.url,
-          active: true
-        });
-        browserAPI.windows.update(tabs[0].windowId, { focused: true });
-      } else {
-        // Create new tab
-        browserAPI.tabs.create({
-          url: message.url
-        });
-      }
-    });
-    return false;
-  }
-
   return false;
 }
 
 // Listen for messages from content script
 browserAPI.runtime.onMessage.addListener(handleAsyncMessage);
-
-// Version-based onboarding system
-// Set this to the minimum version that should see the onboarding page
-// Example: '0.4.0' means users upgrading from <0.4.0 will see onboarding once
-const ONBOARDING_MIN_VERSION = '0.3.5';
-
-// Show onboarding page on first install or version-based updates
-browserAPI.runtime.onInstalled.addListener((details) => {
-  const currentVersion = browserAPI.runtime.getManifest().version;
-
-  if (details.reason === 'install') {
-    // First install - always show onboarding
-    browserAPI.tabs.create({
-      url: browserAPI.runtime.getURL('onboarding.html')
-    });
-    browserAPI.storage.local.set({ onboardingLastSeenVersion: currentVersion });
-  } else if (details.reason === 'update') {
-    // Check version-based onboarding
-    browserAPI.storage.local.get(['onboardingLastSeenVersion']).then((result) => {
-      const lastSeenVersion = result.onboardingLastSeenVersion;
-
-      if (shouldShowOnboarding(lastSeenVersion, ONBOARDING_MIN_VERSION)) {
-        browserAPI.tabs.create({
-          url: browserAPI.runtime.getURL('onboarding.html')
-        });
-        browserAPI.storage.local.set({ onboardingLastSeenVersion: currentVersion });
-      } else {
-        // Still update the version even if we don't show onboarding
-        browserAPI.storage.local.set({ onboardingLastSeenVersion: currentVersion });
-      }
-    });
-  }
-});
 
 // Clean up old cache entries on startup
 browserAPI.runtime.onStartup.addListener(() => {

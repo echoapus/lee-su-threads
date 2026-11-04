@@ -22,7 +22,6 @@ This file provides guidance for Claude Code when working on this project.
 │   ├── background.js         # Service worker
 │   ├── content.js            # Content script (injects injected.js)
 │   ├── injected.js           # Main logic (runs in page context)
-│   ├── popup.html/js         # Extension popup UI
 │   ├── styles.css            # Injected styles
 │   └── lib/
 │       ├── dateParser.js     # Date parsing logic (shared module)
@@ -83,6 +82,11 @@ Use `browserAPI.storage`, `browserAPI.runtime`, `browserAPI.i18n`, etc.
 - Profile data cached in `browserAPI.storage.local`
 - Cache expires after 72 hours
 - User ID → username mapping cached separately (30 days)
+
+### Rate limiting
+
+- Every profile fetch (auto-scroll queue, a manual 📍 click on a post, a manual click in the followers/following list) ends up calling `fetchProfileInfo()` in `src/injected.js`, which is wrapped once with `createThrottle()` (`src/lib/requestThrottle.js`) to serialize all of them with a minimum delay — this is the single place to adjust the floor, not each caller
+- Threads itself can still return 429; that's handled separately via the `threads-rate-limited` event → `showRateLimitToast()` cooldown
 
 ## Build & Development
 

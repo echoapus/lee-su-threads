@@ -10,7 +10,6 @@
 - **地點標籤**：在貼文時間旁顯示作者所在地點
 - **新用戶標記**：自動標示加入 Threads 未滿 30 天的新用戶
 - **快取機制**：個人資料快取 72 小時，用戶 ID 快取 30 天
-- **匯出資料**：可將所有資料匯出為 JSON
 - **速率限制保護**：被 Threads 限制時會自動暫停並提醒
 
 ## 擷取的資訊
@@ -22,12 +21,6 @@
 
 ### 動態中的地點標籤
 ![動態中的地點標籤](screenshots/feed-badge.png)
-
-### 彈出視窗 - 個人資料列表
-![個人資料列表](screenshots/popup-profiles.png)
-
-### 彈出視窗 - 地點統計
-![地點統計](screenshots/popup-location-stats.png)
 
 ## 安裝方式
 
@@ -69,7 +62,6 @@
 1. 前往 [threads.com](https://www.threads.com)
 2. 正常瀏覽動態
 3. 擴充功能會自動在貼文旁顯示地點標籤
-4. 點擊擴充功能圖示可查看所有已擷取的資料
 
 ## 隱私說明
 
@@ -97,7 +89,6 @@ A browser extension (Chrome & Firefox) that automatically displays location info
 - **Location badges**: Shows location next to post timestamp
 - **New user flagging**: Automatically marks users who joined Threads within the last 30 days
 - **Caching**: Profile data cached for 72 hours, user IDs cached for 30 days
-- **Export**: Export all data as JSON
 - **Rate limit protection**: Auto-pauses and notifies when rate limited by Threads
 
 ### What's Extracted
@@ -109,12 +100,6 @@ A browser extension (Chrome & Firefox) that automatically displays location info
 
 #### Location badges in feed
 ![Location badges in feed](screenshots/feed-badge.png)
-
-#### Popup - Profiles tab
-![Profiles list](screenshots/popup-profiles.png)
-
-#### Popup - Location Stats tab
-![Location statistics](screenshots/popup-location-stats.png)
 
 ### Installation
 
@@ -156,7 +141,6 @@ A browser extension (Chrome & Firefox) that automatically displays location info
 1. Navigate to [threads.com](https://www.threads.com)
 2. Browse your feed normally
 3. Location badges will automatically appear next to posts
-4. Click the extension icon to view all extracted profiles
 
 ### Privacy
 

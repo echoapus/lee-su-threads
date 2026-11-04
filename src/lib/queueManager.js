@@ -1,14 +1,11 @@
 /**
- * Queue management for auto-fetching profiles
- * Handles both feed and follower queues with throttling and rate limiting
+ * Queue management for auto-fetching feed post profiles, with throttling and rate limiting
  */
 
 import { displayProfileInfo, autoFetchProfile } from './postUI.js';
-import { createLocationBadge } from './friendshipsUI.js';
-import { fetchProfileByUserId, updateButtonWithFetchResult } from './profileFetcher.js';
 
 /**
- * Shared queue function for both feed and followers
+ * Add a username to the auto-fetch queue
  * @param {string} username - Username to queue
  * @param {HTMLElement} btn - Button element
  * @param {Array} queue - Queue array to add to
@@ -59,12 +56,6 @@ export function queueFetch(username, btn, queue, observer, processFunc, shouldPr
 export async function processFetchQueue(fetchQueue, state, profileCache, fetchDelayMs) {
   if (state.isFetching || fetchQueue.length === 0) return;
 
-  // Check if auto-query is disabled
-  if (!state.autoQueryEnabled) {
-    console.log('[Threads Extractor] Auto-query disabled. Skipping queue processing.');
-    return;
-  }
-
   // Check if rate limited
   if (Date.now() < state.rateLimitedUntil) {
     console.log('[Threads Extractor] Rate limit cooldown active. Skipping queue processing.');
@@ -108,89 +99,4 @@ export async function processFetchQueue(fetchQueue, state, profileCache, fetchDe
   }
 
   state.isFetching = false;
-}
-
-/**
- * Process the followers fetch queue with throttling
- * @param {Array} followersFetchQueue - Followers queue array
- * @param {Object} state - State object containing flags and settings
- * @param {Map} profileCache - Profile cache
- * @param {number} fetchDelayMs - Delay between fetches
- */
-export async function processFollowersFetchQueue(followersFetchQueue, state, profileCache, fetchDelayMs) {
-  if (state.isFetchingFollowers || followersFetchQueue.length === 0) return;
-
-  // Check if auto-query followers is disabled
-  if (!state.autoQueryFollowersEnabled) {
-    return;
-  }
-
-  // Check if rate limited
-  if (Date.now() < state.rateLimitedUntil) {
-    return;
-  }
-
-  state.isFetchingFollowers = true;
-
-  while (followersFetchQueue.length > 0) {
-    // Stop processing if user is logged out
-    if (state.isUserLoggedIn === false) {
-      console.log('[Threads Extractor] User logged out. Stopping followers queue processing.');
-      followersFetchQueue.length = 0;
-      break;
-    }
-
-    // Check rate limit before each fetch
-    if (Date.now() < state.rateLimitedUntil) {
-      console.log('[Threads Extractor] Rate limit triggered. Stopping followers queue processing.');
-      break;
-    }
-
-    const { username, btn } = followersFetchQueue.shift();
-    console.log(`[Threads Extractor] Processing follower @${username}, queue length: ${followersFetchQueue.length}`);
-
-    // Skip if already fetched while in queue
-    if (profileCache.has(username)) {
-      const cached = profileCache.get(username);
-      // Check if button still exists in DOM
-      if (!btn.parentElement) {
-        continue; // Button was removed, skip
-      }
-      // For followers, replace button with badge
-      if (cached.location) {
-        const badge = await createLocationBadge(cached);
-        btn.parentElement.replaceChild(badge, btn);
-      } else {
-        btn.textContent = '➖';
-        btn.title = 'No location available';
-        btn.disabled = true;
-        btn.style.cursor = 'default';
-        btn.style.opacity = '0.4';
-      }
-      continue;
-    }
-
-    btn.textContent = '⏳';
-
-    // Get the user ID from the button
-    const userId = btn.getAttribute('data-userid');
-    if (!userId) {
-      btn.textContent = '❓';
-      btn.title = 'User ID not found';
-      continue;
-    }
-
-    // Fetch profile info using shared utility
-    const profileInfo = await fetchProfileByUserId(userId);
-
-    // Update button with result using shared utility
-    await updateButtonWithFetchResult(btn, username, profileInfo, profileCache, createLocationBadge);
-
-    // Throttle: wait before next fetch
-    if (followersFetchQueue.length > 0) {
-      await new Promise(r => setTimeout(r, fetchDelayMs));
-    }
-  }
-
-  state.isFetchingFollowers = false;
 }

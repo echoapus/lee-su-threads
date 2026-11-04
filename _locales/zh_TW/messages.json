@@ -71,26 +71,11 @@
   "autoQueryFollower": {
     "message": "自動查詢追蹤者"
   },
-  "feedLabel": {
-    "message": "動態"
-  },
-  "followerLabel": {
-    "message": "追蹤者"
-  },
-  "autoQueryTooltip": {
-    "message": "在瀏覽 Threads 時自動取得個人檔案資訊"
-  },
   "autoQueryFollowers": {
     "message": "自動查詢追蹤者"
   },
   "autoQueryFollowersTooltip": {
     "message": "自動取得追蹤者/追蹤中列表的地點資訊"
-  },
-  "showFlags": {
-    "message": "顯示國旗"
-  },
-  "showFlagsTooltip": {
-    "message": "在地點名稱旁顯示國旗"
   },
   "filterPlaceholder": {
     "message": "篩選地點..."
@@ -116,12 +101,6 @@
   "newUser": {
     "message": "新帳號"
   },
-  "rateLimitPopupHint": {
-    "message": "你可以在擴充功能設定中關閉自動查詢以避免觸發速率限制。"
-  },
-  "rateLimitOpenSettings": {
-    "message": "使用說明"
-  },
   "loginRequiredWarning": {
     "message": "🔒 請登入 Threads 以使用此擴充功能"
   },
@@ -134,77 +113,11 @@
   "dismiss": {
     "message": "關閉"
   },
-  "onboardingTitle": {
-    "message": "歡迎使用 Lee-Su-Threads (哩速隨)！"
-  },
-  "onboardingSubtitle": {
-    "message": "自動顯示 Threads 使用者的地點資訊"
-  },
-  "onboardingFeaturesTitle": {
-    "message": "這個擴充功能的功能"
-  },
-  "onboardingFeature1": {
-    "message": "顯示 Threads 貼文作者的地點和加入時間"
-  },
-  "onboardingFeature2": {
-    "message": "在你滾動時自動取得個人檔案資訊"
-  },
-  "onboardingFeature3": {
-    "message": "用 [新帳號] 標籤標示新使用者（2 個月內加入）"
-  },
-  "onboardingFeature4": {
-    "message": "在彈出視窗中查看地點統計"
-  },
-  "onboardingControlTitle": {
-    "message": "控制你的擴充功能"
-  },
-  "onboardingControlDesc": {
-    "message": "你可以隨時點擊瀏覽器工具列中的擴充功能圖示來開啟或關閉自動查詢。"
-  },
-  "onboardingStep1Title": {
-    "message": "點擊擴充功能圖示"
-  },
-  "onboardingStep1Desc": {
-    "message": "在你的瀏覽器擴充功能工具列（通常在右上角）中找到哩速隨圖示。"
-  },
-  "onboardingStep2Title": {
-    "message": "切換自動查詢"
-  },
-  "onboardingStep2Desc": {
-    "message": "使用彈出視窗中的開關來啟用或停用自動取得個人檔案。"
-  },
-  "onboardingStep3Title": {
-    "message": "查看統計資料"
-  },
-  "onboardingStep3Desc": {
-    "message": "查看「地點統計」分頁，看看你的動態作者來自哪裡！"
-  },
-  "onboardingStep4Title": {
-    "message": "快速存取捷徑"
-  },
-  "onboardingStep4Desc": {
-    "message": "在 Threads 上按下 Ctrl+Shift+,（逗號）即可快速在新分頁中開啟設定。"
-  },
-  "onboardingLink": {
-    "message": "說明"
-  },
-  "onboardingCtaTitle": {
-    "message": "準備好開始了嗎？"
-  },
-  "onboardingCtaButton": {
-    "message": "開啟 Threads"
-  },
-  "onboardingFooter": {
-    "message": "用 ❤️ 為 Threads 社群打造"
-  },
   "resetEmoji": {
     "message": "重設為預設旗幟"
   },
   "customEmojiHint": {
     "message": "點擊以設定此地點的自訂表情符號"
-  },
-  "clickToCustomize": {
-    "message": "點擊以自訂表情符號"
   },
   "pickEmojiFor": {
     "message": "為以下地點選擇表情符號："
@@ -232,8 +145,5 @@
   },
   "disposableAccountTooltip": {
     "message": "此帳號使用 Threads 系統隨機指派的用戶名，從未自行修改。這不代表它是假帳號。"
-  },
-  "disposableToggle": {
-    "message": "隨機帳號"
   }
 }
