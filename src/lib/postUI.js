@@ -1,6 +1,7 @@
 // Post UI functions for displaying profile info on Threads posts
 import { formatLocation } from './locationMapper.js';
 import { appendStatusTags } from './profileBadge.js';
+import { getUserIdByUsername, fetchProfileByUserId } from './profileFetcher.js';
 
 // Cross-browser compatibility
 const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
@@ -8,9 +9,8 @@ const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
 /**
  * Display profile info badge for a user by finding and updating their fetch buttons
  * @param {Object} profileInfo - Profile information object
- * @param {Map} profileCache - Profile cache
  */
-export async function displayProfileInfo(profileInfo, profileCache) {
+export function displayProfileInfo(profileInfo) {
   const username = profileInfo.username;
 
   // Find all fetch buttons for this user
@@ -22,7 +22,7 @@ export async function displayProfileInfo(profileInfo, profileCache) {
     if (btn.previousElementSibling?.classList?.contains('threads-profile-info-badge')) continue;
 
     // Create the info badge and insert before the button (so it appears to the left)
-    const badge = await createProfileBadge(profileInfo);
+    const badge = createProfileBadge(profileInfo);
     btn.parentElement?.insertBefore(badge, btn);
 
     // Hide button after success - badge shows the info
@@ -38,9 +38,9 @@ export async function displayProfileInfo(profileInfo, profileCache) {
 /**
  * Create a profile info badge element with location and joined date
  * @param {Object} profileInfo - Profile information object
- * @returns {Promise<HTMLElement>} Badge element
+ * @returns {HTMLElement} Badge element
  */
-export async function createProfileBadge(profileInfo) {
+export function createProfileBadge(profileInfo) {
   const badge = document.createElement('span');
   badge.className = 'threads-profile-info-badge';
 
@@ -72,31 +72,12 @@ export async function autoFetchProfile(username, btn, profileCache) {
   // Skip if already cached
   if (profileCache.has(username)) {
     const cached = profileCache.get(username);
-    displayProfileInfo(cached, profileCache);
+    displayProfileInfo(cached);
     btn.style.display = 'none';
     return;
   }
 
-  // Request user ID lookup
-  const requestId = crypto.randomUUID();
-  const userId = await new Promise((resolve) => {
-    const handler = (event) => {
-      if (event.data?.type === 'threads-userid-response' && event.data?.requestId === requestId) {
-        window.removeEventListener('message', handler);
-        resolve(event.data.userId);
-      }
-    };
-    window.addEventListener('message', handler);
-    window.postMessage({
-      type: 'threads-userid-request',
-      requestId: requestId,
-      username: username
-    }, '*');
-    setTimeout(() => {
-      window.removeEventListener('message', handler);
-      resolve(null);
-    }, 2000);
-  });
+  const userId = await getUserIdByUsername(username);
 
   if (!userId) {
     btn.textContent = '❓';
@@ -105,26 +86,7 @@ export async function autoFetchProfile(username, btn, profileCache) {
     return;
   }
 
-  // Request profile fetch
-  const fetchRequestId = crypto.randomUUID();
-  const result = await new Promise((resolve) => {
-    const handler = (event) => {
-      if (event.data?.type === 'threads-fetch-response' && event.data?.requestId === fetchRequestId) {
-        window.removeEventListener('message', handler);
-        resolve(event.data.result);
-      }
-    };
-    window.addEventListener('message', handler);
-    window.postMessage({
-      type: 'threads-fetch-request',
-      requestId: fetchRequestId,
-      userId: userId
-    }, '*');
-    setTimeout(() => {
-      window.removeEventListener('message', handler);
-      resolve(null);
-    }, 10000);
-  });
+  const result = await fetchProfileByUserId(userId);
 
   if (result) {
     if (result._rateLimited) {

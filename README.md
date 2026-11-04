@@ -1,153 +1,157 @@
 # Lee-Su-Threads 你是誰
 
-一個瀏覽器擴充功能（支援 Chrome 與 Firefox），自動顯示 Threads 貼文作者的地點資訊，不需要點進每個人的個人檔案。
+在 Threads 貼文旁顯示作者所在地與帳號標記，減少逐一開啟個人檔案查詢的步驟。
 
-> **[English](#english)** below
+[English](#english)
+
+![Threads 動態中的地點標籤](screenshots/feed-badge.png)
 
 ## 功能
 
-- **自動擷取**：瀏覽動態時自動載入作者的地點資訊
-- **地點標籤**：在貼文時間旁顯示作者所在地點
-- **新用戶標記**：自動標示加入 Threads 未滿 30 天的新用戶
-- **快取機制**：個人資料快取 72 小時，用戶 ID 快取 30 天
-- **速率限制保護**：被 Threads 限制時會自動暫停並提醒
+- **動態地點標籤**：貼文進入畫面後自動查詢作者資料；已有快取時直接顯示。
+- **追蹤清單查詢**：在粉絲與追蹤中清單點擊 📍，手動取得地點。
+- **新帳號標記**：依加入月份標示本月及前兩個月加入的帳號；Meta 驗證帳號不顯示此標記。
+- **預設格式帳號標記**：辨識字典中的英文動物名稱、半形句點與 6–8 位數字組合，例如 `camel.253044`。符合格式不代表是假帳號或機器人，也無法證明使用者從未改名。
+- **本機快取**：重複瀏覽時減少請求，同一帳號、相同逾時設定的同時查詢共用一次請求。
+- **限流保護**：查詢依序送出；收到 HTTP 429 時，暫停該頁面的自動查詢 1 小時並顯示提醒。
+- **多語系**：繁體中文、簡體中文、英文、日文與韓文。
 
-## 擷取的資訊
+地點與加入時間來自 Threads 回傳的個人資料，不是 GPS 定位。查詢需要登入 Threads；沒有提供地點的帳號會顯示無地點資料。
 
-- **地點**：作者設定的所在地（例如：台灣）
-- **加入時間**：加入 Threads 的時間
+## 安裝與使用
 
-## 截圖
+| 瀏覽器 | 安裝方式 |
+| --- | --- |
+| Chrome／Edge | [Chrome Web Store](https://chromewebstore.google.com/detail/lee-su-threads/cciaoflecmmomchcjndagcnfpdaanhol) |
+| Firefox／Firefox for Android | [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/lee-su-threads-%E4%BD%A0%E6%98%AF%E8%AA%B0/) |
+| Safari（macOS／iOS） | 從原始碼建置並透過 Xcode 執行，見下方開發說明 |
 
-### 動態中的地點標籤
-![動態中的地點標籤](screenshots/feed-badge.png)
+安裝後，開啟並登入 [www.threads.com](https://www.threads.com)，重新整理頁面即可使用。動態會自動顯示標籤；粉絲與追蹤中清單採手動查詢。
 
-## 安裝方式
+商店版本的功能可能與此儲存庫中的原始碼不同。
 
-**Chrome / Edge / Opera 使用者：** 前往 [Chrome Web Store](https://chromewebstore.google.com/detail/lee-su-threads/cciaoflecmmomchcjndagcnfpdaanhol)，點擊「**加到 Chrome**」按鈕即可安裝，日後可自動獲得更新。
+## 資料與隱私
 
-**Firefox 使用者（推薦）：** 前往 [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/lee-su-threads-%E4%BD%A0%E6%98%AF%E8%AA%B0/)，點擊「**加到 Firefox**」按鈕即可安裝，日後可自動獲得更新。
+擴充功能在 Threads 頁面讀取相關 API 回應，並向 Threads 查詢個人資料。快取儲存在瀏覽器本機，沒有分析追蹤服務，也不會將快取上傳至開發者伺服器。
 
-**Safari 使用者（macOS / iOS）：** Safari 版本開發中。開發者可參考 [Safari 開發工作流程](docs/SAFARI_WORKFLOW.md)。
+| 快取資料 | 有效期限 |
+| --- | --- |
+| 有地點的個人資料 | 21 天 |
+| 無地點的個人資料 | 1 天 |
+| 使用者名稱與帳號 ID 對照 | 60 天 |
 
-**Android 使用者：** 先從 Play 商店安裝 [Firefox for Android](https://play.google.com/store/apps/details?id=org.mozilla.firefox)，然後在 Firefox 中前往 [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/lee-su-threads-%E4%BD%A0%E6%98%AF%E8%AA%B0/) 安裝擴充功能。
+重新讀取本機快取時會排除過期資料；瀏覽器啟動時會清理過期項目。已開啟頁面中的記憶體快取會保留到頁面重新載入。移除擴充功能會刪除其本機儲存資料。
 
-<details>
-<summary>手動安裝（開發者）</summary>
+權限僅包含本機儲存與 `https://www.threads.com/*` 網站存取。完整說明見 [隱私權政策](PRIVACY.md)。
 
-> **開發者注意：** 若要了解如何貢獻程式碼或設定 CI 自動簽署，請參閱 [CONTRIBUTING.md](CONTRIBUTING.md)
+## 從原始碼開發
 
-**從 Release 安裝：**
+使用 Node.js 24 與 npm，與 CI 環境一致。
 
-1. 前往 [Releases 頁面](https://github.com/meettomorrow/lee-su-threads/releases) 下載最新版本的 ZIP 檔
-2. 解壓縮 ZIP 檔
-3. 開啟 Chrome，前往 `chrome://extensions/`
-4. 開啟右上角的「**開發人員模式**」
-5. 點擊「**載入未封裝項目**」
-6. 選擇解壓縮後的資料夾
-7. 擴充功能圖示會出現在工具列
+```bash
+npm ci
+npm run build:watch
+```
 
-**從原始碼建置：**
+watch 模式不需要 Git 版本標籤，會在 JavaScript 變更後重建並同步瀏覽器輸出。首次建置完成後，依下表載入擴充功能；每次重建後仍需在瀏覽器重新載入擴充功能及 Threads 頁面。修改 manifest、樣式、語系或資料檔後，請重新啟動建置。
 
-1. Clone 此專案
-2. 執行 `npm install`
-3. 執行 `npm run build`
-4. **Chrome**: 開啟 Chrome，前往 `chrome://extensions/`，開啟「**開發人員模式**」，點擊「**載入未封裝項目**」，選擇專案中的 `dist/chrome/` 資料夾
-5. **Firefox**: 開啟 Firefox，前往 `about:debugging#/runtime/this-firefox`，點擊「**載入臨時附加元件**」，選擇 `dist/firefox/manifest.json` 檔案
+| 瀏覽器 | 載入位置 |
+| --- | --- |
+| Chrome／Edge | 開啟 `chrome://extensions/` 或 `edge://extensions/`，啟用開發人員模式，載入未封裝項目 `dist/chrome/` |
+| Firefox | 開啟 `about:debugging#/runtime/this-firefox`，載入臨時附加元件 `dist/firefox/manifest.json` |
+| Safari | 使用 `dist/safari/` 與 Xcode 專案；參閱 [Safari 開發流程](docs/SAFARI_WORKFLOW.md) |
 
-</details>
+不持續監看的一次性開發建置：
 
-## 使用方式
+```bash
+NODE_ENV=development npm run build
+```
 
-1. 前往 [threads.com](https://www.threads.com)
-2. 正常瀏覽動態
-3. 擴充功能會自動在貼文旁顯示地點標籤
+以上環境變數語法適用於 Bash／zsh。Safari 專案首次建立時可使用 `NODE_ENV=development npm run setup:safari`，避免沒有版本標籤時觸發正式建置保護。
 
-## 隱私說明
+### 測試與建置
 
-- 所有資料僅儲存在本機 Chrome 儲存空間
-- 不會將任何資料傳送到外部伺服器
-- 快取會在 72 小時後自動清除
+```bash
+npm test                              # 執行全部測試
+npm run test:watch                    # 持續執行測試
+npm run generate:mapper               # 重新產生地點與國旗對照資料
+npm run build                        # 正式建置：Chrome、Firefox、Safari
+npm run build:firefox-amo             # Firefox 商店變體：dist/firefox-amo/
+npm run build:firefox-self-hosted     # Firefox 自行發佈變體：dist/firefox-direct/
+node scripts/check-versions.js --web  # 檢查網頁擴充功能產物版本
+```
+
+正式版本以 Git 標籤 `vX.Y.Z` 為準；開發版本使用該版本加一個 patch，沒有標籤時使用 `0.0.1`。原始 manifest 的 `0.0.0` 是佔位值，不能用來發布。若 checkout 缺少標籤，請先取得發行標籤；不要為了本機開發建立或推送發行標籤。
+
+Firefox 自行發佈變體使用獨立的附加元件 ID 與更新網址；本機建置不包含簽署。Safari 建置產生網頁擴充功能檔案，原生 App 的執行、簽署與封存仍需要 macOS 和 Xcode。
+
+### 程式結構
+
+```text
+src/content.js             頁面初始化、事件與動態監看
+src/injected.js            Threads 頁面中的網路攔截與資料查詢
+src/background.js          本機快取讀寫與過期清理
+src/lib/                   解析、通訊、排程、標籤與 DOM 工具
+src/manifest*.json         各瀏覽器的擴充功能設定
+_locales/                  介面翻譯
+data/                     地點與帳號格式字典
+test/                     Vitest 測試
+scripts/                  資料產生、版本檢查與封裝工具
+```
+
+貢獻與發布流程見 [CONTRIBUTING.md](CONTRIBUTING.md)，地點資料維護見 [data/README.md](data/README.md)。
 
 ## 限制
 
-- 需要 Threads 載入個人資料 API 才能擷取（通常瀏覽動態時會自動載入）
-- 若 Threads 更改 API 格式，可能需要更新擴充功能
-- 部分使用者可能未設定地點資訊
-
----
-
-<a name="english"></a>
+- 依賴 Threads 的頁面結構與非公開 API，網站更新可能造成查詢或標籤失效。
+- 尚未從頁面回應取得帳號 ID 時，查詢可能失敗；可先捲動、開啟該帳號個人檔案，再重試。
+- 新帳號標記只有月份精度；預設格式標記只比對名稱格式。這些資訊不應用來判定帳號是否可信。
+- 自動查詢的冷卻狀態以頁面為單位，不會在分頁之間共用。
 
 ## English
 
-A browser extension (Chrome & Firefox) that automatically displays location info for Threads post authors without visiting each profile.
+Lee-Su-Threads adds author location badges to Threads posts. It fetches profiles for visible posts and offers manual location lookup in follower and following lists.
 
 ### Features
 
-- **Auto-fetch**: Automatically loads author location while browsing the feed
-- **Location badges**: Shows location next to post timestamp
-- **New user flagging**: Automatically marks users who joined Threads within the last 30 days
-- **Caching**: Profile data cached for 72 hours, user IDs cached for 30 days
-- **Rate limit protection**: Auto-pauses and notifies when rate limited by Threads
+- Location badges with country flags where a matching location is available.
+- New-account labels for the current month and the two preceding months, excluding Meta-verified accounts.
+- A label for handles matching a known animal word followed by a dot and 6–8 digits. This is a format match, not evidence of a fake account or an unchanged username.
+- Local caching, shared concurrent profile requests with matching timeouts, and serialized requests.
+- A one-hour pause in the current page's automatic lookups after an HTTP 429 response.
+- Traditional Chinese, Simplified Chinese, English, Japanese, and Korean interfaces.
 
-### What's Extracted
+Location and join dates come from Threads profile responses, not GPS. Profile lookup requires signing in to Threads.
 
-- **Location**: User's set location (e.g., Taiwan)
-- **Join date**: When the user joined Threads
+### Install
 
-### Screenshots
+Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/lee-su-threads/cciaoflecmmomchcjndagcnfpdaanhol) or [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/lee-su-threads-%E4%BD%A0%E6%98%AF%E8%AA%B0/), then reload [www.threads.com](https://www.threads.com). The Firefox listing also supports Firefox for Android. Store releases may differ from this source tree.
 
-#### Location badges in feed
-![Location badges in feed](screenshots/feed-badge.png)
+Safari development requires macOS and Xcode. See the [Safari workflow](docs/SAFARI_WORKFLOW.md).
 
-### Installation
+### Develop
 
-**Chrome / Edge / Opera Users:** Go to [Chrome Web Store](https://chromewebstore.google.com/detail/lee-su-threads/cciaoflecmmomchcjndagcnfpdaanhol) and click "**Add to Chrome**" for easy installation and automatic updates.
+Use Node.js 24 and npm:
 
-**Firefox Users (Recommended):** Go to [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/lee-su-threads-%E4%BD%A0%E6%98%AF%E8%AA%B0/) and click "**Add to Firefox**" for easy installation and automatic updates.
+```bash
+npm ci
+npm run build:watch
+```
 
-**Safari Users (macOS / iOS):** Safari version in development. Developers see [Safari Development Workflow](docs/SAFARI_WORKFLOW.md).
+Load `dist/chrome/` as an unpacked Chrome extension or `dist/firefox/manifest.json` as a temporary Firefox add-on. Watch mode copies JavaScript rebuilds into the browser directories; reload the extension and Threads page to use changes. Restart the build after changing static assets, manifests, locales, or data files.
 
-**Android Users:** Install [Firefox for Android](https://play.google.com/store/apps/details?id=org.mozilla.firefox) from the Play Store, then visit [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/lee-su-threads-%E4%BD%A0%E6%98%AF%E8%AA%B0/) in Firefox to install the extension.
+For a one-off development build, run `NODE_ENV=development npm run build` in Bash or zsh. Run `npm test` for the test suite.
 
-<details>
-<summary>Manual Installation (Developers)</summary>
+Production builds use a reachable Git version tag. A tagless checkout with placeholder manifests will fail production builds; use development mode for local work. Firefox signing and Safari native app builds are separate steps. See [CONTRIBUTING.md](CONTRIBUTING.md) for release tooling.
 
-> **For Contributors:** See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow and CI signing setup.
+### Privacy and limits
 
-**From Release:**
+Profile requests go to Threads. Cached profiles and username-to-ID mappings stay in local browser storage; there is no analytics service or upload to a developer server.
 
-1. Download the latest ZIP from [Releases](https://github.com/meettomorrow/lee-su-threads/releases)
-2. Unzip the file
-3. Open Chrome and navigate to `chrome://extensions/`
-4. Enable **Developer mode** (toggle in top-right corner)
-5. Click **Load unpacked**
-6. Select the unzipped folder
-7. The extension icon should appear in your toolbar
+Profiles with a location are valid for 21 days, profiles without one for 1 day, and ID mappings for 60 days. Expired entries are excluded when reading persistent caches and cleaned on browser startup. An open page retains its in-memory cache until reload. See the [privacy policy](PRIVACY.md).
 
-**Build from Source:**
-
-1. Clone this repository
-2. Run `npm install`
-3. Run `npm run build`
-4. **Chrome**: Open Chrome, navigate to `chrome://extensions/`, enable **Developer mode**, click **Load unpacked**, select the `dist/chrome/` folder
-5. **Firefox**: Open Firefox, navigate to `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, select the `dist/firefox/manifest.json` file
-
-</details>
-
-### Usage
-
-1. Navigate to [threads.com](https://www.threads.com)
-2. Browse your feed normally
-3. Location badges will automatically appear next to posts
-
-### Privacy
-
-- All data is stored locally in your browser's storage
-- No data is sent to external servers
-- Profile cache is automatically cleared after 72 hours
+Threads can change its page structure or private APIs. Month-based account labels and handle-format matches do not establish whether an account is trustworthy. Automatic lookup cooldowns apply per page, not across tabs.
 
 ## License
 
-MIT License
+[MIT](LICENSE)

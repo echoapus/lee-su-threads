@@ -199,13 +199,17 @@ async function build() {
   try {
     // First, build the JavaScript bundles to dist/shared
     if (isWatch) {
-      const ctx = await esbuild.context(buildOptions);
-      // Perform initial build before starting watch mode
-      await ctx.rebuild();
-      console.log('✓ Initial build complete');
-      // Copy static files after initial build completes
-      await copyStaticFiles();
-      // Now start watching for changes
+      const ctx = await esbuild.context({
+        ...buildOptions,
+        plugins: [{
+          name: 'sync-browser-outputs',
+          setup(build) {
+            build.onEnd(async result => {
+              if (result.errors.length === 0) await copyStaticFiles();
+            });
+          }
+        }]
+      });
       await ctx.watch();
       console.log('👀 Watching for changes...');
     } else {

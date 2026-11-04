@@ -49,15 +49,10 @@ function injectLocationButtonIntoUserRow(username, userId, profileCache) {
     let userRow = link;
     for (let i = 0; i < 10 && userRow; i++) {
       if (userRow.querySelector && userRow.textContent.includes(username)) {
-        // Check if we already added a button or badge
-        if (userRow.querySelector('.threads-friendships-fetch-btn') ||
-            userRow.querySelector('.threads-friendships-location-badge')) {
-          return;
-        }
-
         // Find the container to insert button
         const insertTarget = findUsernameContainer(userRow, username);
         if (insertTarget) {
+          if (insertTarget.querySelector('.threads-friendships-fetch-btn, .threads-friendships-location-badge')) break;
           const btn = createFriendshipsLocationButton(username, userId, profileCache);
           // Find the follow button that is a direct child
           const followButton = Array.from(insertTarget.children).find(child =>
@@ -104,7 +99,7 @@ function createFriendshipsLocationButton(username, userId, profileCache) {
     const profileInfo = await fetchProfileByUserId(userId);
 
     // Update button with result using shared utility
-    await updateButtonWithFetchResult(btn, username, profileInfo, profileCache, createLocationBadge);
+    updateButtonWithFetchResult(btn, username, profileInfo, profileCache, createLocationBadge);
   });
 
   return btn;
@@ -115,7 +110,7 @@ function createFriendshipsLocationButton(username, userId, profileCache) {
  * @param {string} username - Username (without @)
  * @param {Object} profileInfo - Profile information object
  */
-async function injectLocationBadgeIntoUserRow(username, profileInfo) {
+function injectLocationBadgeIntoUserRow(username, profileInfo) {
   // Find all links to this user's profile
   const profileLinks = document.querySelectorAll(`a[href="/@${username}"]`);
 
@@ -125,15 +120,11 @@ async function injectLocationBadgeIntoUserRow(username, profileInfo) {
     for (let i = 0; i < 10 && userRow; i++) {
       // Look for the container that has the username
       if (userRow.querySelector && userRow.textContent.includes(username)) {
-        // Check if we already added a badge
-        if (userRow.querySelector('.threads-friendships-location-badge')) {
-          return;
-        }
-
         // Find where to insert the badge
         const insertTarget = findUsernameContainer(userRow, username);
         if (insertTarget) {
-          const badge = await createLocationBadge(profileInfo);
+          if (insertTarget.querySelector('.threads-friendships-location-badge')) break;
+          const badge = createLocationBadge(profileInfo);
           // Find the follow button that is a direct child
           const followButton = Array.from(insertTarget.children).find(child =>
             child.getAttribute && child.getAttribute('role') === 'button'
@@ -166,15 +157,10 @@ function injectEmptyLocationIntoUserRow(username) {
     for (let i = 0; i < 10 && userRow; i++) {
       // Look for the container that has the username
       if (userRow.querySelector && userRow.textContent.includes(username)) {
-        // Check if we already added something
-        if (userRow.querySelector('.threads-friendships-location-badge') ||
-            userRow.querySelector('.threads-friendships-fetch-btn')) {
-          return;
-        }
-
         // Find where to insert the indicator
         const insertTarget = findUsernameContainer(userRow, username);
         if (insertTarget) {
+          if (insertTarget.querySelector('.threads-friendships-fetch-btn, .threads-friendships-location-badge')) break;
           const emptyIndicator = createEmptyLocationIndicator(username);
           // Find the follow button that is a direct child
           const followButton = Array.from(insertTarget.children).find(child =>
@@ -215,7 +201,7 @@ function createEmptyLocationIndicator(username) {
  * @param {Object} profileInfo - Profile information object
  * @returns {HTMLSpanElement} - The created badge
  */
-export async function createLocationBadge(profileInfo) {
+export function createLocationBadge(profileInfo) {
   const badge = document.createElement('span');
   badge.className = 'threads-friendships-location-badge';
 

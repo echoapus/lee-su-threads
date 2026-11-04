@@ -8,101 +8,89 @@ const PROFILE_WITH_LOCATION_MAX_AGE = 21 * 24 * 60 * 60 * 1000; // 21 days for p
 const PROFILE_NO_LOCATION_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours (1 day) for profiles without location
 
 // Handle async message responses for both Chrome and Firefox
-function handleAsyncMessage(message, sender, sendResponse) {
+async function handleAsyncMessage(message) {
   if (message.type === 'PROFILE_INFO_EXTRACTED') {
     console.log('[Threads Extractor] Profile info received:', message.data);
 
     // Store the profile info
-    browserAPI.storage.local.get(['profileCache']).then((result) => {
-      const cache = result.profileCache || {};
-      const username = message.data.username;
-      if (username) {
-        cache[username] = {
-          ...message.data,
-          timestamp: Date.now()
-        };
-        browserAPI.storage.local.set({ profileCache: cache });
-      }
-    });
-    return false;
+    const result = await browserAPI.storage.local.get(['profileCache']);
+    const cache = result.profileCache || {};
+    const username = message.data.username;
+    if (username) {
+      cache[username] = {
+        ...message.data,
+        timestamp: Date.now()
+      };
+      await browserAPI.storage.local.set({ profileCache: cache });
+    }
+    return;
   }
 
   if (message.type === 'GET_CACHED_PROFILES') {
-    browserAPI.storage.local.get(['profileCache']).then((result) => {
-      const cache = result.profileCache || {};
-      const now = Date.now();
-      const validCache = {};
+    const result = await browserAPI.storage.local.get(['profileCache']);
+    const cache = result.profileCache || {};
+    const now = Date.now();
+    const validCache = {};
 
-      // Filter out expired entries based on different TTLs
-      for (const [username, data] of Object.entries(cache)) {
-        const maxAge = data.location ? PROFILE_WITH_LOCATION_MAX_AGE : PROFILE_NO_LOCATION_MAX_AGE;
-        if (now - data.timestamp < maxAge) {
-          validCache[username] = data;
-        }
+    // Filter out expired entries based on different TTLs
+    for (const [username, data] of Object.entries(cache)) {
+      const maxAge = data.location ? PROFILE_WITH_LOCATION_MAX_AGE : PROFILE_NO_LOCATION_MAX_AGE;
+      if (now - data.timestamp < maxAge) {
+        validCache[username] = data;
       }
+    }
 
-      sendResponse(validCache);
-    });
-    return true; // Keep channel open for async response
+    return validCache;
   }
 
   // Store user ID mappings (username -> userId)
   if (message.type === 'STORE_USER_IDS') {
     const userIds = message.data; // { username: userId, ... }
-    browserAPI.storage.local.get(['userIdCache']).then((result) => {
-      const cache = result.userIdCache || {};
-      const now = Date.now();
-      for (const [username, userId] of Object.entries(userIds)) {
-        if (!cache[username]) {
-          cache[username] = { userId, timestamp: now };
-        }
-      }
-      browserAPI.storage.local.set({ userIdCache: cache });
-    });
-    return false;
+    const result = await browserAPI.storage.local.get(['userIdCache']);
+    const cache = result.userIdCache || {};
+    const now = Date.now();
+    for (const [username, userId] of Object.entries(userIds)) {
+      cache[username] = { userId, timestamp: now };
+    }
+    await browserAPI.storage.local.set({ userIdCache: cache });
+    return;
   }
 
   // Get cached user IDs
   if (message.type === 'GET_USER_ID_CACHE') {
-    browserAPI.storage.local.get(['userIdCache']).then((result) => {
-      sendResponse(result.userIdCache || {});
-    });
-    return true; // Keep channel open for async response
+    const result = await browserAPI.storage.local.get(['userIdCache']);
+    const now = Date.now();
+    return Object.fromEntries(Object.entries(result.userIdCache || {}).filter(
+      ([, data]) => now - data.timestamp < USER_ID_CACHE_MAX_AGE
+    ));
   }
 
   return false;
 }
 
-// Listen for messages from content script
-browserAPI.runtime.onMessage.addListener(handleAsyncMessage);
-
-// Clean up old cache entries on startup
-browserAPI.runtime.onStartup.addListener(() => {
-  const now = Date.now();
-
-  // Clean profile cache with different TTLs based on location data
-  browserAPI.storage.local.get(['profileCache']).then((result) => {
-    const cache = result.profileCache || {};
-    const cleanedCache = {};
-    for (const [username, data] of Object.entries(cache)) {
-      // Use different max age depending on whether location exists
-      const maxAge = data.location ? PROFILE_WITH_LOCATION_MAX_AGE : PROFILE_NO_LOCATION_MAX_AGE;
-      if (now - data.timestamp < maxAge) {
-        cleanedCache[username] = data;
-      }
-    }
-    browserAPI.storage.local.set({ profileCache: cleanedCache });
+// All reads, writes and cleanup share one queue so updates cannot overwrite each other.
+let storageQueue = Promise.resolve();
+function enqueueStorage(task) {
+  const result = storageQueue.then(task);
+  storageQueue = result.catch(error => {
+    console.error('[Threads Extractor] Cache operation failed:', error);
   });
+  return result;
+}
 
-  // Clean user ID cache (30 days)
-  browserAPI.storage.local.get(['userIdCache']).then((result) => {
-    const cache = result.userIdCache || {};
-    const cleanedCache = {};
-    for (const [username, data] of Object.entries(cache)) {
-      if (now - data.timestamp < USER_ID_CACHE_MAX_AGE) {
-        cleanedCache[username] = data;
-      }
-    }
-    browserAPI.storage.local.set({ userIdCache: cleanedCache });
+browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!['PROFILE_INFO_EXTRACTED', 'GET_CACHED_PROFILES', 'STORE_USER_IDS', 'GET_USER_ID_CACHE'].includes(message.type)) return false;
+  enqueueStorage(() => handleAsyncMessage(message)).then(
+    result => sendResponse(result ?? null),
+    () => sendResponse(null)
+  );
+  return true;
+});
+
+browserAPI.runtime.onStartup.addListener(() => {
+  enqueueStorage(async () => {
+    const profileCache = await handleAsyncMessage({ type: 'GET_CACHED_PROFILES' });
+    const userIdCache = await handleAsyncMessage({ type: 'GET_USER_ID_CACHE' });
+    await browserAPI.storage.local.set({ profileCache, userIdCache });
   });
 });

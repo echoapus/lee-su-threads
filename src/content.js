@@ -1,7 +1,7 @@
 // Content script for Threads Profile Info Extractor
 import { findPostContainer, detectActiveTab, isUserListContext, findFollowButtonContainer, findUsernameFromTimeElement } from './lib/domHelpers.js';
 import { injectLocationUIForUser, createLocationBadge } from './lib/friendshipsUI.js';
-import { displayProfileInfo, autoFetchProfile, createProfileBadge } from './lib/postUI.js';
+import { displayProfileInfo, createProfileBadge } from './lib/postUI.js';
 import { isSingleUserNotification, findIconElement, extractIconColor } from './lib/notificationDetector.js';
 import { fetchProfileByUserId, getUserIdByUsername } from './lib/profileFetcher.js';
 import { showRateLimitToast, showLoginRequiredBanner } from './lib/notifications.js';
@@ -65,7 +65,7 @@ window.addEventListener('threads-profile-extracted', (event) => {
     });
 
     // Update UI with new profile info
-    displayProfileInfo(profileInfo, profileCache);
+    displayProfileInfo(profileInfo);
   }
 });
 
@@ -217,7 +217,7 @@ function addFetchButtons() {
 
   const onActivityPage = isActivityPage();
 
-  timeElements.forEach(async timeEl => {
+  timeElements.forEach(timeEl => {
     // Mark as processed
     timeEl.setAttribute('data-threads-info-added', 'true');
 
@@ -283,7 +283,7 @@ function addFetchButtons() {
 
       if (isUserList) {
         // User-list context: use friendships badge (pill style, positioned right)
-        const badge = await createLocationBadge(profileInfo);
+        const badge = createLocationBadge(profileInfo);
 
         // Find the Follow button container using structural detection
         const buttonContainer = findFollowButtonContainer(postContainer);
@@ -299,7 +299,7 @@ function addFetchButtons() {
       } else {
         // Post context: use post badge (inline style)
         const timeParent = timeEl.closest('span') || timeEl.parentElement;
-        const badge = await createProfileBadge(profileInfo);
+        const badge = createProfileBadge(profileInfo);
 
         if (onActivityPage) {
           // On activity pages: append inline to timeParent to avoid breaking block layout
@@ -383,7 +383,11 @@ function addFetchButtons() {
         const result = await fetchProfileByUserId(userId);
 
         if (result) {
-          if (result._loginRequired) {
+          if (result._rateLimited) {
+            btn.textContent = '🔄';
+            btn.title = 'Rate limited. Click to retry later.';
+            btn.disabled = false;
+          } else if (result._loginRequired) {
             // Login required - show lock icon and banner
             btn.textContent = '🔒';
             btn.title = browserAPI.i18n.getMessage('loginRequired') || 'Login required. Click to learn more.';
@@ -397,7 +401,7 @@ function addFetchButtons() {
             if (profileInfo && isUserList) {
               // For user-list context (activity modals), insert badge here
               // friendshipsUI handles its own buttons, but we handle activity modal buttons
-              const badge = await createLocationBadge(profileInfo);
+              const badge = createLocationBadge(profileInfo);
               btn.parentElement.insertBefore(badge, btn);
               btn.style.display = 'none';
             }

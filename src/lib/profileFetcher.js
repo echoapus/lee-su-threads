@@ -2,68 +2,47 @@
  * Shared utility functions for fetching profile data and user IDs
  */
 
-/**
- * Fetch profile information by user ID using postMessage to injected script
- * @param {string} userId - The user ID to fetch profile for
- * @param {number} timeoutMs - Timeout in milliseconds (default: 10000)
- * @returns {Promise<Object|null>} Profile info object or null if failed
- */
-export async function fetchProfileByUserId(userId, timeoutMs = 10000) {
-  const fetchRequestId = crypto.randomUUID();
-
-  return new Promise((resolve) => {
-    const handler = (event) => {
-      if (event.data?.type === 'threads-fetch-response' &&
-          event.data?.requestId === fetchRequestId) {
-        window.removeEventListener('message', handler);
-        resolve(event.data.result);
+// A completed or timed-out request releases both its listener and timer.
+function requestFromPage(type, data, responseKey, timeoutMs) {
+  const requestId = crypto.randomUUID();
+  const controller = new AbortController();
+  let timer;
+  return new Promise((resolve, reject) => {
+    window.addEventListener('message', event => {
+      if (event.source !== window || event.origin !== window.location.origin) return;
+      if (event.data?.type === `${type}-response` && event.data.requestId === requestId) {
+        resolve(event.data[responseKey]);
       }
-    };
-    window.addEventListener('message', handler);
-
-    window.postMessage({
-      type: 'threads-fetch-request',
-      requestId: fetchRequestId,
-      userId: userId
-    }, '*');
-
-    setTimeout(() => {
-      window.removeEventListener('message', handler);
-      resolve(null);
-    }, timeoutMs);
+    }, { signal: controller.signal });
+    timer = setTimeout(() => resolve(null), timeoutMs);
+    try {
+      window.postMessage({ type: `${type}-request`, requestId, ...data }, window.location.origin);
+    } catch (error) {
+      reject(error);
+    }
+  }).finally(() => {
+    clearTimeout(timer);
+    controller.abort();
   });
 }
 
-/**
- * Look up user ID by username using postMessage to injected script
- * @param {string} username - The username to look up (without @)
- * @param {number} timeoutMs - Timeout in milliseconds (default: 2000)
- * @returns {Promise<string|null>} User ID or null if not found
- */
-export async function getUserIdByUsername(username, timeoutMs = 2000) {
-  const requestId = crypto.randomUUID();
+const pendingProfiles = new Map();
 
-  return new Promise((resolve) => {
-    const handler = (event) => {
-      if (event.data?.type === 'threads-userid-response' &&
-          event.data?.requestId === requestId) {
-        window.removeEventListener('message', handler);
-        resolve(event.data.userId);
-      }
-    };
-    window.addEventListener('message', handler);
+/** Fetch a profile, sharing concurrent requests with the same timeout. */
+export function fetchProfileByUserId(userId, timeoutMs = 10000) {
+  const key = `${userId}:${timeoutMs}`;
+  if (!pendingProfiles.has(key)) {
+    pendingProfiles.set(key,
+      requestFromPage('threads-fetch', { userId }, 'result', timeoutMs)
+        .finally(() => pendingProfiles.delete(key))
+    );
+  }
+  return pendingProfiles.get(key);
+}
 
-    window.postMessage({
-      type: 'threads-userid-request',
-      requestId: requestId,
-      username: username
-    }, '*');
-
-    setTimeout(() => {
-      window.removeEventListener('message', handler);
-      resolve(null);
-    }, timeoutMs);
-  });
+/** Look up a username in the page's captured ID map. */
+export function getUserIdByUsername(username, timeoutMs = 2000) {
+  return requestFromPage('threads-userid', { username }, 'userId', timeoutMs);
 }
 
 /**
@@ -72,17 +51,17 @@ export async function getUserIdByUsername(username, timeoutMs = 2000) {
  * @param {string} username - Username (without @)
  * @param {Object|null} profileInfo - Profile info object or null if failed
  * @param {Map} profileCache - Cache to store profile data
- * @param {Function} createBadgeFunc - Function to create badge element (async)
- * @returns {Promise<void>}
+ * @param {Function} createBadgeFunc - Function to create badge element
+ * @returns {void}
  */
-export async function updateButtonWithFetchResult(btn, username, profileInfo, profileCache, createBadgeFunc) {
+export function updateButtonWithFetchResult(btn, username, profileInfo, profileCache, createBadgeFunc) {
   if (profileInfo && !profileInfo._rateLimited && !profileInfo._loginRequired) {
     profileCache.set(username, profileInfo);
 
     // Replace button with badge
     if (profileInfo.location) {
-      const badge = await createBadgeFunc(profileInfo);
-      btn.parentElement.replaceChild(badge, btn);
+      const badge = createBadgeFunc(profileInfo);
+      btn.replaceWith(badge);
     } else {
       // No location data
       btn.textContent = '➖';

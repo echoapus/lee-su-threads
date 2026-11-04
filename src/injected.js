@@ -98,7 +98,7 @@ function broadcastNewUserIds() {
 
 // Helper to add user ID and queue for persistence
 function addUserId(username, userId, source = '') {
-  if (!userIdMap.has(username)) {
+  if (userIdMap.get(username) !== userId) {
     userIdMap.set(username, userId);
     pendingNewUserIds[username] = userId;
     broadcastNewUserIds();
@@ -244,7 +244,14 @@ window.fetch = async function(...args) {
 
   const response = await originalFetch.apply(this, args);
 
-  // Extract user IDs from responses
+  // Inspect only profile-related responses without delaying the page's fetch.
+  if (typeof url === 'string' && /graphql\/query|bulk-route-definitions|about_this_profile_async_action/.test(url)) {
+    void inspectResponse(response, url, friendlyName);
+  }
+  return response;
+};
+
+async function inspectResponse(response, url, friendlyName) {
   if (typeof url === 'string') {
     try {
       const clone = response.clone();
@@ -304,8 +311,7 @@ window.fetch = async function(...args) {
     }
   }
 
-  return response;
-};
+}
 
 // ========== XHR INTERCEPTOR ==========
 const originalXHROpen = XMLHttpRequest.prototype.open;

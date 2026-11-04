@@ -14,7 +14,7 @@ const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
  * @returns {IntersectionObserver}
  */
 export function createFeedVisibilityObserver(queueFeedFetch, pendingVisibility, profileCache, state, visibilityDelayMs) {
-  return new IntersectionObserver((entries) => {
+  const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       const btn = entry.target;
       const username = btn.getAttribute('data-username');
@@ -27,29 +27,30 @@ export function createFeedVisibilityObserver(queueFeedFetch, pendingVisibility, 
           btn.textContent = '🔒';
           btn.title = browserAPI.i18n.getMessage('loginRequired') || 'Login required. Click to learn more.';
           btn.setAttribute('data-login-required', 'true');
-          entry.target.observer?.unobserve?.(btn);
+          observer.unobserve(btn);
           return;
         }
 
         // Post entered viewport - start delay timer
-        if (!pendingVisibility.has(username) && !profileCache.has(username)) {
+        if (!pendingVisibility.has(btn) && !profileCache.has(username)) {
           const timeoutId = setTimeout(() => {
             // Still visible after delay? Queue it
-            if (pendingVisibility.has(username)) {
-              pendingVisibility.delete(username);
+            if (pendingVisibility.has(btn)) {
+              pendingVisibility.delete(btn);
               queueFeedFetch(username, btn);
-              entry.target.observer?.unobserve?.(btn);
+              observer.unobserve(btn);
             }
           }, visibilityDelayMs);
-          pendingVisibility.set(username, timeoutId);
+          pendingVisibility.set(btn, timeoutId);
         }
       } else {
         // Post left viewport - cancel pending timer
-        if (pendingVisibility.has(username)) {
-          clearTimeout(pendingVisibility.get(username));
-          pendingVisibility.delete(username);
+        if (pendingVisibility.has(btn)) {
+          clearTimeout(pendingVisibility.get(btn));
+          pendingVisibility.delete(btn);
         }
       }
     });
   }, { threshold: 0.1 });
+  return observer;
 }
