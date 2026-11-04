@@ -9,9 +9,6 @@
 #
 # Requires cairosvg:  python3 -m pip install cairosvg
 #
-# Note: icons/icon.png (the large master) is intentionally NOT regenerated here.
-# It is an App Store / store asset and must stay opaque (App Store icons may not
-# carry an alpha channel).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

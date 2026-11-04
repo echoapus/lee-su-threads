@@ -132,67 +132,12 @@ async function copyStaticFilesForBrowser(browser) {
   await cp('fonts', `${distDir}/fonts`, { recursive: true });
 }
 
-// Copy static files for Safari (similar to Chrome/Firefox but uses safari manifest)
-async function copyStaticFilesForSafari() {
-  const distDir = 'dist/safari';
-
-  // Ensure Safari dist directory exists
-  await mkdir(distDir, { recursive: true });
-
-  // Copy bundled JS files from shared directory
-  await copyFile('dist/shared/content.js', `${distDir}/content.js`);
-  await copyFile('dist/shared/background.js', `${distDir}/background.js`);
-  await copyFile('dist/shared/injected.js', `${distDir}/injected.js`);
-
-  if (!isWatch) {
-    // Copy source maps in production builds
-    await copyFile('dist/shared/content.js.map', `${distDir}/content.js.map`).catch(() => {});
-    await copyFile('dist/shared/background.js.map', `${distDir}/background.js.map`).catch(() => {});
-    await copyFile('dist/shared/injected.js.map', `${distDir}/injected.js.map`).catch(() => {});
-  }
-
-  // Copy Safari manifest
-  const manifestContent = await readFile('src/manifest.safari.json', 'utf-8');
-  const manifest = JSON.parse(manifestContent);
-
-  manifest.version = resolveManifestVersion(manifest.version, 'safari');
-
-  await writeFile(`${distDir}/manifest.json`, JSON.stringify(manifest, null, 2));
-
-  // Copy HTML and CSS
-  await copyFile('src/styles.css', `${distDir}/styles.css`);
-
-  // Copy _locales directory recursively
-  await cp('_locales', `${distDir}/_locales`, { recursive: true });
-
-  // Replace extension name for Safari (Apple requires different name)
-  const locales = ['en', 'zh_TW', 'zh_CN', 'ja', 'ko'];
-  for (const locale of locales) {
-    const messagesPath = `${distDir}/_locales/${locale}/messages.json`;
-    try {
-      let content = await readFile(messagesPath, 'utf-8');
-      // Replace all occurrences of "Lee-Su-Threads" with "Lee-Su-Sui"
-      content = content.replaceAll('Lee-Su-Threads', 'Lee-Su-Sui');
-      await writeFile(messagesPath, content);
-    } catch (error) {
-      // Skip if locale file doesn't exist
-    }
-  }
-
-  // Copy icons directory
-  await cp('icons', `${distDir}/icons`, { recursive: true });
-
-  // Copy fonts directory
-  await cp('fonts', `${distDir}/fonts`, { recursive: true });
-}
-
 async function copyStaticFiles() {
-  // Build for Chrome, Firefox, and Safari
+  // Build for Chrome and Firefox
   await copyStaticFilesForBrowser('chrome');
   await copyStaticFilesForBrowser('firefox');
-  await copyStaticFilesForSafari();
 
-  console.log('✓ Static files copied to dist/chrome, dist/firefox-*, and dist/safari');
+  console.log('✓ Static files copied to Chrome and Firefox output directories');
 }
 
 async function build() {

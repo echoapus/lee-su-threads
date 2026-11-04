@@ -23,10 +23,8 @@ npm run build:firefox-amo
 
 # Verify the built web artifacts match the git tag BEFORE zipping, so a
 # mismatch aborts (set -e) without leaving a wrongly-named zip in dist-zip/.
-# --web skips MARKETING_VERSION: this script only packages Chrome/Firefox, and
-# the Safari app version legitimately lags on a web-only release.
 echo "🔎 Verifying versions against the git tag..."
-node "$SCRIPT_DIR/check-versions.js" --web
+node "$SCRIPT_DIR/check-versions.js"
 
 # Get version from manifest.json in dist/chrome/
 VERSION=$(grep '"version"' dist/chrome/manifest.json | sed 's/.*"version": "\(.*\)".*/\1/')

@@ -15,12 +15,8 @@
     "build:firefox-amo": "FIREFOX_BUILD_TYPE=amo node esbuild.config.js",
     "build:firefox-self-hosted": "FIREFOX_BUILD_TYPE=self-hosted node esbuild.config.js",
     "clean": "rm -rf dist",
-    "start:firefox": "web-ext run --source-dir=dist/firefox-direct --start-url=https://www.threads.com",
-    "start:firefox:android": "bash scripts/run-firefox-android.sh",
-    "setup:safari": "bash scripts/setup-safari-project.sh",
-    "set:safari-version": "bash scripts/set-safari-version.sh",
-    "check:versions": "node scripts/check-versions.js",
-    "open:safari": "open dist-safari/safari-project/Lee-Su-Sui/Lee-Su-Sui.xcodeproj"
+    "start:firefox": "web-ext run --source-dir=dist/firefox --start-url=https://www.threads.com",
+    "check:versions": "node scripts/check-versions.js"
   },
   "repository": {
     "type": "git",

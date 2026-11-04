@@ -42,8 +42,7 @@ jobs:
       # `git describe --match` glob — so a short tag like `v1.2` or a prerelease
       # like `v1.2.3-beta.1` would silently resolve to the PREVIOUS release's
       # version. Require exactly X.Y.Z: it's the only shape that resolves end to
-      # end (App Store MARKETING_VERSION allows at most 3 parts) and what every
-      # doc example uses. (EXTENSION_VERSION_RE stays looser — a manifest can
+      # end and is what the release tooling expects. (EXTENSION_VERSION_RE stays looser — a manifest can
       # hold a 4th part — but a release *tag* must be 3 parts.)
       - name: Validate release tag is a plain version
         run: |
@@ -54,16 +53,16 @@ jobs:
           echo "✅ Release version: $VERSION"
 
       # Fallback only: with fetch-depth 0 the build reads the tag directly, but
-      # keep the manifests patched in case describe ever fails. All four
+      # keep the manifests patched in case describe ever fails. All three
       # manifests are covered so none can fall back to the 0.0.0 placeholder.
       - name: Update version in manifests
         run: |
-          for m in manifest.json manifest.firefox.json manifest.firefox-direct.json manifest.safari.json; do
+          for m in manifest.json manifest.firefox.json manifest.firefox-direct.json; do
             jq ".version = \"$VERSION\"" "src/$m" > temp.json && mv temp.json "src/$m"
           done
 
       # package.sh cleans dist/, builds Chrome + Firefox AMO, zips them, and
-      # runs the version guard (--web).
+      # runs the version guard.
       - name: Package extensions
         run: bash scripts/package.sh
 

@@ -1,11 +1,7 @@
 // Single source of truth for how a version is derived and validated.
 //
-// The build (esbuild.config.js) and the release guard (check-versions.js) both
-// import from here so the rules can't drift apart. Two callers can't import it
-// and keep their own copy on purpose: set-safari-version.sh (bash) and
-// .github/workflows/release.yml both validate the release tag as exactly 3
-// parts — deliberately stricter than EXTENSION_VERSION_RE (Chrome MV3 allows 4,
-// the App Store allows 3). Keep those in sync with RELEASE_VERSION_RE below.
+// The build and release guard share these rules. Keep release.yml's
+// three-part release tag validation in sync with RELEASE_VERSION_RE.
 
 import { execSync } from "node:child_process";
 
@@ -27,9 +23,7 @@ export function isValidExtensionVersion(version) {
   return typeof version === "string" && EXTENSION_VERSION_RE.test(version);
 }
 
-// A release tag is exactly X.Y.Z — stricter than a manifest version (App Store
-// MARKETING_VERSION allows at most 3 parts), and what release.yml enforces on
-// the pushed tag. EXTENSION_VERSION_RE stays the looser "what a manifest holds".
+// Releases use X.Y.Z; manifests may also contain a fourth numeric part.
 export const RELEASE_VERSION_RE = /^\d+\.\d+\.\d+$/;
 
 export function isReleaseVersion(version) {

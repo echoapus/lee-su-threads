@@ -1,28 +1,6 @@
 #!/usr/bin/env node
-// Verify every version source agrees with the latest git tag.
-//
-// The git tag is the single source of truth. This guard fails the run when
-// anything drifts from it — run it before a release / Safari archive, or in
-// CI after building.
-//
-//   node scripts/check-versions.js          # full check (use before a Safari archive)
-//   node scripts/check-versions.js --web     # web artifacts only (skip MARKETING_VERSION)
-//   npm run check:versions
-//
-// Sources checked (each only when present):
-//   - Xcode MARKETING_VERSION in the Safari project's project.pbxproj
-//   - built dist/*/manifest.json (skipped if not built yet)
-//
-// --web skips MARKETING_VERSION: a web-only (Chrome/Firefox) release legitimately
-// leaves the Safari app version lagging, so package.sh uses --web to avoid failing
-// on that. A human cutting a Safari release runs the full check.
-//
-// Note: this is a release gate. A dev/watch build writes tag+1 into dist, so it
-// will (correctly) report a mismatch — run it against a production build.
-//
-// Not checked, by design: src/manifest*.json (a 0.0.0 placeholder the build
-// overwrites from the tag) and package.json's version (npm-local metadata, not
-// read by the build and not shipped in any artifact).
+// Verify built Chrome and Firefox manifests against the release tag.
+// Run after a production build; development builds use tag + 1.
 
 import { execSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
@@ -53,54 +31,15 @@ function getTag() {
   return getGitVersion({ cwd: root });
 }
 
-function getMarketingVersions() {
-  const pbxproj = join(
-    root,
-    "dist-safari/safari-project/Lee-Su-Sui/Lee-Su-Sui.xcodeproj/project.pbxproj",
-  );
-  if (!existsSync(pbxproj)) return null;
-  const content = readFileSync(pbxproj, "utf-8");
-  // \s*=\s* tolerates any spacing — a hand-edited MARKETING_VERSION=1.0.6;
-  // (no spaces) must not slip past the release guard.
-  const versions = [...content.matchAll(/MARKETING_VERSION\s*=\s*([^;]+);/g)].map((m) =>
-    // pbxproj values may be quoted (MARKETING_VERSION = "1.0.6";) — strip them.
-    m[1].trim().replace(/^"|"$/g, ""),
-  );
-  return [...new Set(versions)];
-}
-
 function getManifestVersion(rel) {
   const p = join(root, rel);
   if (!existsSync(p)) return null;
   return JSON.parse(readFileSync(p, "utf-8")).version;
 }
 
-const webOnly = process.argv.includes("--web");
-
 const tag = getTag();
 const rows = [["git tag (source of truth)", tag ?? "(none reachable)"]];
 const problems = [];
-
-// Xcode MARKETING_VERSION (the hand-edited value that drifted before).
-const mv = webOnly ? null : getMarketingVersions();
-if (webOnly) {
-  rows.push(["Xcode MARKETING_VERSION", "(--web: skipped)"]);
-} else if (mv === null) {
-  rows.push(["Xcode MARKETING_VERSION", "(project not found — skipped)"]);
-} else if (mv.length === 0) {
-  rows.push(["Xcode MARKETING_VERSION", "(none found — skipped)"]);
-} else {
-  rows.push(["Xcode MARKETING_VERSION", mv.join(", ")]);
-  if (mv.length > 1) {
-    problems.push(`MARKETING_VERSION is inconsistent across build configs: ${mv.join(", ")}`);
-  } else if (mv[0] === PLACEHOLDER_VERSION) {
-    problems.push(`MARKETING_VERSION is the ${PLACEHOLDER_VERSION} placeholder — run: bash scripts/set-safari-version.sh <version>`);
-  } else if (tag && mv[0] !== tag) {
-    problems.push(
-      `MARKETING_VERSION (${mv[0]}) != git tag (${tag}). Run: bash scripts/set-safari-version.sh ${tag}`,
-    );
-  }
-}
 
 // Built dist manifests (present only after a build).
 for (const rel of [
@@ -108,7 +47,6 @@ for (const rel of [
   "dist/firefox/manifest.json",
   "dist/firefox-amo/manifest.json",
   "dist/firefox-direct/manifest.json",
-  "dist/safari/manifest.json",
 ]) {
   const v = getManifestVersion(rel);
   if (v == null) continue;
@@ -131,12 +69,12 @@ for (const rel of [
 // HEAD carries a version-LIKE tag (starts with an optional `v` then a digit)
 // that isn't a plain vX.Y.Z equal to the resolved version, `git describe` fell
 // back to an ancestor and every other row would otherwise agree on it. Unrelated
-// tags (`nightly`, `ios-1.0.7`, …) are not version-like, so they don't trip it.
+// tags (`nightly`, `nightly-build`, …) are not version-like, so they don't trip it.
 const headTags = getHeadTags();
 rows.push(["git tag(s) on HEAD", headTags.length ? headTags.join(", ") : "(none)"]);
 // A version-like HEAD tag is optional-`v` then `digits.digit` — enough to catch
 // `v1.2` / `v1.2.3.4` while ignoring dates (`2026-08-08`) and unrelated tags
-// (`nightly`, `ios-1.0.7`). EVERY such tag must be a plain vX.Y.Z equal to the
+// (`nightly`, `nightly-build`). EVERY such tag must be a plain vX.Y.Z equal to the
 // resolved version: a per-tag check (not `.some`), so a good tag can't excuse a
 // bad sibling — e.g. `v1.2` + `v1.0.7` on one commit, where pushing `v1.2` is
 // what triggers release.yml.
